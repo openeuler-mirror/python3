@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.4
-Release: 1
+Release: 2
 License: Python
 
 %global branchversion 3.7
@@ -64,7 +64,7 @@ BuildRequires: ncurses-devel
 BuildRequires: openssl-devel
 BuildRequires: pkgconfig
 BuildRequires: readline-devel
-BuildRequires: openEuler-rpm-config
+BuildRequires: system-rpm-config
 BuildRequires: sqlite-devel
 BuildRequires: gdb
 
@@ -767,5 +767,8 @@ LD_LIBRARY_PATH=$(pwd)/build/optimized $(pwd)/build/optimized/python -m test.reg
 %{_mandir}/*/*
 
 %changelog
+* Wed Nov 13 2019 hexiaowen <hexiaowen@huawei.com> - 3.7.4-2
+- Add system-rpm-config buildrequires
+
 * Tue Aug 27 2019 openEuler Buildteam <buildteam@openeuler.org> - 3.7.4-1
 - Package init
