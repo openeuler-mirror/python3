@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.4
-Release: 2
+Release: 3
 License: Python
 
 %global branchversion 3.7
@@ -112,6 +112,8 @@ Requires: python-setuptools-wheel
 Requires: python-pip-wheel
 Provides: python3-libs
 Obsoletes: python3-libs
+Provides: python3-enum34 = 1.0.4-5
+Obsoletes: python3-enum34 < 1.0.4-5
 
 Recommends: python3-setuptools
 Recommends: python3-pip
@@ -767,6 +769,9 @@ LD_LIBRARY_PATH=$(pwd)/build/optimized $(pwd)/build/optimized/python -m test.reg
 %{_mandir}/*/*
 
 %changelog
+* Thu Dec 12 2019 lvying <lvying6@huawei.com> - 3.7.4-3
+- provides python3-enum34
+
 * Wed Nov 13 2019 hexiaowen <hexiaowen@huawei.com> - 3.7.4-2
 - Add system-rpm-config buildrequires
 
