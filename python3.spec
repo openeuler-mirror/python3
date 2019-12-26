@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.4
-Release: 3
+Release: 4
 License: Python
 
 %global branchversion 3.7
@@ -101,6 +101,10 @@ Patch205: 00205-make-libpl-respect-lib64.patch
 Patch251: 00251-change-user-install-location.patch
 Patch274: 00274-fix-arch-names.patch
 Patch316: 00316-mark-bdist_wininst-unsupported.patch
+
+Patch6000:	CVE-2019-16056.patch
+Patch6001:	CVE-2019-16935.patch
+Patch6002:	CVE-2019-17514.patch
 
 Provides: python%{branchversion} = %{version}-%{release}
 Provides: python(abi) = %{branchversion}
@@ -231,7 +235,6 @@ pushd ${DebugBuildDir}
   --with-system-ffi \
   --enable-loadable-sqlite-extensions \
   --with-dtrace \
-  --with-lto \
   --with-ssl-default-suites=openssl \
   --with-valgrind \
   --without-ensurepip \
@@ -256,7 +259,6 @@ pushd ${OptimizedBuildDir}
   --with-system-ffi \
   --enable-loadable-sqlite-extensions \
   --with-dtrace \
-  --with-lto \
   --with-ssl-default-suites=openssl \
   --with-valgrind \
   --without-ensurepip \
@@ -374,6 +376,11 @@ mv %{buildroot}%{_bindir}/2to3-%{branchversion} %{buildroot}%{_bindir}/2to3
 %check
 topdir=$(pwd)
 
+BEP_WHITELIST_TMP="$BEP_WHITELIST"
+BEP_GTDLIST_TMP="$BEP_GTDLIST"
+export BEP_WHITELIST="python python-debug "$BEP_WHITELIST""
+export BEP_GTDLIST=`echo $BEP_GTDLIST | sed 's/ python / /g'`
+
 export OPENSSL_CONF=/non-existing-file
 
 LD_LIBRARY_PATH=$(pwd)/build/debug $(pwd)/build/debug/python -m test.pythoninfo
@@ -399,6 +406,9 @@ LD_LIBRARY_PATH=$(pwd)/build/optimized $(pwd)/build/optimized/python -m test.reg
     -x test_gdb \
     -x test_socket \
     -x test_asyncio
+
+export BEP_WHITELIST="$BEP_WHITELIST_TMP"
+export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 
 %files
 %license LICENSE
@@ -659,6 +669,19 @@ LD_LIBRARY_PATH=$(pwd)/build/optimized $(pwd)/build/optimized/python -m test.reg
 %{pylibdir}/distutils/tests
 %{pylibdir}/sqlite3/test
 %{pylibdir}/test
+%exclude %{pylibdir}/test/allsans.pem
+%exclude %{pylibdir}/test/badcert.pem
+%exclude %{pylibdir}/test/badkey.pem
+%exclude %{pylibdir}/test/idnsans.pem
+%exclude %{pylibdir}/test/keycert2.pem
+%exclude %{pylibdir}/test/keycert3.pem
+%exclude %{pylibdir}/test/keycert4.pem
+%exclude %{pylibdir}/test/keycertecc.pem
+%exclude %{pylibdir}/test/keycert.pem
+%exclude %{pylibdir}/test/pycakey.pem
+%exclude %{pylibdir}/test/ssl_key.pem
+%exclude %{pylibdir}/test/keycert3.pem
+%exclude %{pylibdir}/test/ssl_key.pem
 %{dynload_dir}/_ctypes_test.%{SOABI_optimized}.so
 %{dynload_dir}/_testbuffer.%{SOABI_optimized}.so
 %{dynload_dir}/_testcapi.%{SOABI_optimized}.so
@@ -769,6 +792,10 @@ LD_LIBRARY_PATH=$(pwd)/build/optimized $(pwd)/build/optimized/python -m test.reg
 %{_mandir}/*/*
 
 %changelog
+* Thu Dec 24 2019 openEuler Buildteam <buildteam@openeuler.org> - 3.7.4-4
+- fix CVE-2019-16056 CVE-2019-16935 CVE-2019-17514
+- Delete the test keys, fix BEP problem
+
 * Thu Dec 12 2019 lvying <lvying6@huawei.com> - 3.7.4-3
 - provides python3-enum34
 
