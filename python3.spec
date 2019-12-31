@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.4
-Release: 4
+Release: 5
 License: Python
 
 %global branchversion 3.7
@@ -99,7 +99,6 @@ Patch178: 00178-dont-duplicate-flags-in-sysconfig.patch
 Patch189: 00189-use-rpm-wheels.patch
 Patch205: 00205-make-libpl-respect-lib64.patch
 Patch251: 00251-change-user-install-location.patch
-Patch274: 00274-fix-arch-names.patch
 Patch316: 00316-mark-bdist_wininst-unsupported.patch
 
 Patch6000:	CVE-2019-16056.patch
@@ -190,7 +189,6 @@ rm -r Modules/expat
 rm Lib/ensurepip/_bundled/*.whl
 %patch205 -p1
 %patch251 -p1
-%patch274 -p1
 %patch316 -p1
 
 rm configure pyconfig.h.in
@@ -792,6 +790,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Tue Dec 31 2019 hanxinke<hanxinke@huawei.com> - 3.7.4-5
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC:update spec file
+
 * Thu Dec 24 2019 openEuler Buildteam <buildteam@openeuler.org> - 3.7.4-4
 - fix CVE-2019-16056 CVE-2019-16935 CVE-2019-17514
 - Delete the test keys, fix BEP problem
