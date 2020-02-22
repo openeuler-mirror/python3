@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.4
-Release: 5
+Release: 6
 License: Python
 
 %global branchversion 3.7
@@ -105,6 +105,7 @@ Patch6000:	CVE-2019-16056.patch
 Patch6001:	CVE-2019-16935.patch
 Patch6002:	CVE-2019-17514.patch
 
+Provides: python = %{version}-%{release}
 Provides: python%{branchversion} = %{version}-%{release}
 Provides: python(abi) = %{branchversion}
 
@@ -369,6 +370,8 @@ ln -s \
   %{_bindir}/python%{LDVERSION_debug} \
   %{buildroot}%{_bindir}/python3-debug
 
+ln -s %{_bindir}/python3 %{buildroot}%{_bindir}/python
+
 mv %{buildroot}%{_bindir}/2to3-%{branchversion} %{buildroot}%{_bindir}/2to3
 
 %check
@@ -411,7 +414,7 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %files
 %license LICENSE
 %doc README.rst
-
+%{_bindir}/python
 %{_bindir}/pydoc*
 %{_bindir}/python3
 %{_bindir}/pyvenv
@@ -790,6 +793,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Sat Feb 22 2020 chengquan<chengquan3@huawei.com> - 3.7.4-6
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC:Add the default version of python3
+
 * Tue Dec 31 2019 hanxinke<hanxinke@huawei.com> - 3.7.4-5
 - Type:enhancement
 - ID:NA
