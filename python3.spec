@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.4
-Release: 7
+Release: 8
 License: Python
 
 %global branchversion 3.7
@@ -190,6 +190,10 @@ rm Lib/ensurepip/_bundled/*.whl
 %patch205 -p1
 %patch251 -p1
 %patch316 -p1
+
+%patch6000 -p1
+%patch6001 -p1
+%patch6002 -p1
 
 rm configure pyconfig.h.in
 
@@ -790,6 +794,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Tue Mar 17 2020 hanxinke<hanxinke@huawei.com> - 3.7.4-8
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:patch the CVE
+
 * Sat Feb 22 2020 openEuler Buildteam <buildteam@openeuler.org> - 3.7.4-7
 - Type:enhancement
 - ID:NA
