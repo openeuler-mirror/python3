@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.4
-Release: 8
+Release: 9
 License: Python
 
 %global branchversion 3.7
@@ -104,6 +104,7 @@ Patch316: 00316-mark-bdist_wininst-unsupported.patch
 Patch6000:	CVE-2019-16056.patch
 Patch6001:	CVE-2019-16935.patch
 Patch6002:	CVE-2019-17514.patch
+Patch6003:	CVE-2019-9674.patch
 
 Provides: python%{branchversion} = %{version}-%{release}
 Provides: python(abi) = %{branchversion}
@@ -194,6 +195,7 @@ rm Lib/ensurepip/_bundled/*.whl
 %patch6000 -p1
 %patch6001 -p1
 %patch6002 -p1
+%patch6003 -p1
 
 rm configure pyconfig.h.in
 
@@ -794,6 +796,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Tue Apr 21 2020 hanxinke<hanxinke@huawei.com> - 3.7.4-9
+- Type:cves
+- ID:CVE-2019-9674
+- SUG:NA
+- DESC:fix CVE-2019-9674
+
 * Tue Mar 17 2020 hanxinke<hanxinke@huawei.com> - 3.7.4-8
 - Type:bugfix
 - ID:NA
