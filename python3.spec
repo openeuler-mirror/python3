@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.4
-Release: 9
+Release: 10
 License: Python
 
 %global branchversion 3.7
@@ -106,6 +106,8 @@ Patch6001:	CVE-2019-16935.patch
 Patch6002:	CVE-2019-17514.patch
 Patch6003:	CVE-2019-9674.patch
 
+Patch9000: python3-add-generic-os-support.patch
+
 Provides: python%{branchversion} = %{version}-%{release}
 Provides: python(abi) = %{branchversion}
 
@@ -197,6 +199,9 @@ rm Lib/ensurepip/_bundled/*.whl
 %patch6002 -p1
 %patch6003 -p1
 
+%patch9000 -p1
+
+sed -i "s/generic_os/%{_vendor}/g" Lib/platform.py
 rm configure pyconfig.h.in
 
 %build
@@ -796,6 +801,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Mon Jun 1 2020 hanxinke<hanxinke@huawei.com> - 3.7.4-10
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:add generic_os support to python3
+
 * Tue Apr 21 2020 hanxinke<hanxinke@huawei.com> - 3.7.4-9
 - Type:cves
 - ID:CVE-2019-9674
