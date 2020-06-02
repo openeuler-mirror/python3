@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.4
-Release: 10
+Release: 11
 License: Python
 
 %global branchversion 3.7
@@ -136,6 +136,14 @@ Python is also usable as an extension language for applications written
 in other languages that need easy-to-use scripting or automation interfaces.
 
 This package Provides python version 3.
+
+%package -n python3-unversioned-command
+Summary: The "python" command that runs Python 3
+Requires: %{name} = %{version}-%{release}
+Provides: python = %{version}-%{release}
+Conflicts: python2
+%description -n python3-unversioned-command
+This package contains /usr/bin/python - the "python" command that runs Python 3.
 
 %package devel
 Summary: Libraries and header files needed for Python development
@@ -379,6 +387,8 @@ find %{buildroot} -perm 555 -exec chmod 755 {} \;
 ln -s \
   %{_bindir}/python%{LDVERSION_debug} \
   %{buildroot}%{_bindir}/python3-debug
+
+ln -s %{_bindir}/python3 %{buildroot}%{_bindir}/python
 
 mv %{buildroot}%{_bindir}/2to3-%{branchversion} %{buildroot}%{_bindir}/2to3
 
@@ -631,6 +641,8 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_libdir}/%{py_INSTSONAME_optimized}
 %{_libdir}/libpython3.so
 
+%files -n python3-unversioned-command
+%{_bindir}/python
 
 %files devel
 %{_bindir}/2to3
@@ -801,6 +813,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Tue Jun 2 2020 hanxinke<hanxinke@huawei.com> - 3.7.4-11
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:add python3-unversioned-command package
+
 * Mon Jun 1 2020 hanxinke<hanxinke@huawei.com> - 3.7.4-10
 - Type:bugfix
 - ID:NA
