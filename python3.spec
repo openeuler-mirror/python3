@@ -2,12 +2,12 @@ Name: python3
 Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
-Version: 3.7.4
-Release: 11
+Version: 3.8.3
+Release: 1
 License: Python
 
-%global branchversion 3.7
-%global pyshortver 37
+%global branchversion 3.8
+%global pyshortver 38
 
 %ifarch %{ix86} x86_64
 %bcond_without optimizations
@@ -18,15 +18,11 @@ License: Python
 %global pylibdir %{_libdir}/python%{branchversion}
 %global dynload_dir %{pylibdir}/lib-dynload
 
-# See  http://www.python.org/dev/peps/pep-3149/
-%global ABIFLAGS_optimized m
-%global ABIFLAGS_debug     dm
+%global LDVERSION_optimized %{branchversion}
+%global LDVERSION_debug     %{branchversion}d
 
-%global LDVERSION_optimized %{branchversion}m
-%global LDVERSION_debug     %{branchversion}dm
-
-%global SOABI_optimized cpython-%{pyshortver}m-%{_arch}-linux%{_gnu}
-%global SOABI_debug     cpython-%{pyshortver}dm-%{_arch}-linux%{_gnu}
+%global SOABI_optimized cpython-%{pyshortver}-%{_arch}-linux%{_gnu}
+%global SOABI_debug     cpython-%{pyshortver}d-%{_arch}-linux%{_gnu}
 
 # See  http://www.python.org/dev/peps/pep-3147/
 %global bytecode_suffixes .cpython-%{pyshortver}*.pyc
@@ -92,21 +88,11 @@ Patch1:   00001-rpath.patch
 Patch102: 00102-lib64.patch
 Patch111: 00111-no-static-lib.patch
 Patch132: 00132-add-rpmbuild-hooks-to-unittest.patch
-Patch155: 00155-avoid-ctypes-thunks.patch
 Patch160: 00160-disable-test_fs_holes-in-rpm-build.patch
-Patch170: 00170-gc-assertions.patch
 Patch178: 00178-dont-duplicate-flags-in-sysconfig.patch
 Patch189: 00189-use-rpm-wheels.patch
 Patch205: 00205-make-libpl-respect-lib64.patch
 Patch251: 00251-change-user-install-location.patch
-Patch316: 00316-mark-bdist_wininst-unsupported.patch
-
-Patch6000:	CVE-2019-16056.patch
-Patch6001:	CVE-2019-16935.patch
-Patch6002:	CVE-2019-17514.patch
-Patch6003:	CVE-2019-9674.patch
-
-Patch9000: python3-add-generic-os-support.patch
 
 Provides: python%{branchversion} = %{version}-%{release}
 Provides: python(abi) = %{branchversion}
@@ -191,25 +177,14 @@ rm -r Modules/expat
 %patch102 -p1
 %patch111 -p1
 %patch132 -p1
-%patch155 -p1
 %patch160 -p1
-%patch170 -p1
 %patch178 -p1
 
 %patch189 -p1
 rm Lib/ensurepip/_bundled/*.whl
 %patch205 -p1
 %patch251 -p1
-%patch316 -p1
 
-%patch6000 -p1
-%patch6001 -p1
-%patch6002 -p1
-%patch6003 -p1
-
-%patch9000 -p1
-
-sed -i "s/generic_os/%{_vendor}/g" Lib/platform.py
 rm configure pyconfig.h.in
 
 %build
@@ -227,7 +202,7 @@ topdir=$(pwd)
 %global extension_cflags ""
 %global extension_ldflags ""
 
-export CFLAGS="%{extension_cflags} -D_GNU_SOURCE -fPIC -fwrapv"
+export CFLAGS="%{extension_cflags} -D_GNU_SOURCE -fPIC -fwrapv -fstack-protector-strong"
 export CFLAGS_NODIST="%{build_cflags} -D_GNU_SOURCE -fPIC -fwrapv"
 export CXXFLAGS="%{extension_cxxflags} -D_GNU_SOURCE -fPIC -fwrapv"
 export CPPFLAGS="$(pkg-config --cflags-only-I libffi)"
@@ -392,6 +367,8 @@ ln -s %{_bindir}/python3 %{buildroot}%{_bindir}/python
 
 mv %{buildroot}%{_bindir}/2to3-%{branchversion} %{buildroot}%{_bindir}/2to3
 
+cp -a %{_libdir}/libpython3.7m.so.1.0 ${RPM_BUILD_ROOT}%{_libdir}
+
 %check
 topdir=$(pwd)
 
@@ -435,11 +412,8 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 
 %{_bindir}/pydoc*
 %{_bindir}/python3
-%{_bindir}/pyvenv
 
 %{_bindir}/python%{branchversion}
-%{_bindir}/python%{branchversion}m
-%{_bindir}/pyvenv-%{branchversion}
 
 %dir %{pylibdir}
 %dir %{dynload_dir}
@@ -548,6 +522,7 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{dynload_dir}/nis.%{SOABI_optimized}.so
 %{dynload_dir}/ossaudiodev.%{SOABI_optimized}.so
 %{dynload_dir}/parser.%{SOABI_optimized}.so
+%{dynload_dir}/_posixshmem.%{SOABI_optimized}.so
 %{dynload_dir}/pyexpat.%{SOABI_optimized}.so
 %{dynload_dir}/readline.%{SOABI_optimized}.so
 %{dynload_dir}/resource.%{SOABI_optimized}.so
@@ -560,6 +535,8 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{dynload_dir}/_uuid.%{SOABI_optimized}.so
 %{dynload_dir}/xxlimited.%{SOABI_optimized}.so
 %{dynload_dir}/zlib.%{SOABI_optimized}.so
+%{dynload_dir}/_statistics.%{SOABI_optimized}.so
+%{dynload_dir}/_xxsubinterpreters.%{SOABI_optimized}.so
 
 %dir %{pylibdir}/site-packages/
 %dir %{pylibdir}/site-packages/__pycache__/
@@ -640,6 +617,7 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 
 %{_libdir}/%{py_INSTSONAME_optimized}
 %{_libdir}/libpython3.so
+%{_libdir}/libpython3.7m.so.1.0
 
 %files -n python3-unversioned-command
 %{_bindir}/python
@@ -652,10 +630,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %exclude %{_includedir}/python%{LDVERSION_optimized}/%{_pyconfig_h}
 %{_includedir}/python%{LDVERSION_optimized}/*.h
 %{_includedir}/python%{LDVERSION_optimized}/internal/
+%{_includedir}/python%{LDVERSION_optimized}/cpython/
 %doc Misc/README.valgrind Misc/valgrind-python.supp Misc/gdbinit
 
 %{_bindir}/python3-config
 %{_libdir}/pkgconfig/python3.pc
+%{_libdir}/pkgconfig/python3-embed.pc
 %{_bindir}/pathfix.py
 %{_bindir}/pygettext3.py
 %{_bindir}/msgfmt3.py
@@ -663,12 +643,11 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_bindir}/pygettext%{branchversion}.py
 %{_bindir}/msgfmt%{branchversion}.py
 
-%{_bindir}/python%{branchversion}-config
 %{_bindir}/python%{LDVERSION_optimized}-config
 %{_bindir}/python%{LDVERSION_optimized}-*-config
 %{_libdir}/libpython%{LDVERSION_optimized}.so
 %{_libdir}/pkgconfig/python-%{LDVERSION_optimized}.pc
-%{_libdir}/pkgconfig/python-%{branchversion}.pc
+%{_libdir}/pkgconfig/python-%{LDVERSION_optimized}-embed.pc
 
 %{_bindir}/idle*
 %{pylibdir}/idlelib
@@ -690,22 +669,13 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{pylibdir}/distutils/tests
 %{pylibdir}/sqlite3/test
 %{pylibdir}/test
-%exclude %{pylibdir}/test/allsans.pem
-%exclude %{pylibdir}/test/badcert.pem
-%exclude %{pylibdir}/test/badkey.pem
-%exclude %{pylibdir}/test/idnsans.pem
-%exclude %{pylibdir}/test/keycert2.pem
-%exclude %{pylibdir}/test/keycert3.pem
-%exclude %{pylibdir}/test/keycert4.pem
-%exclude %{pylibdir}/test/keycertecc.pem
-%exclude %{pylibdir}/test/keycert.pem
-%exclude %{pylibdir}/test/pycakey.pem
-%exclude %{pylibdir}/test/ssl_key.pem
-%exclude %{pylibdir}/test/keycert3.pem
-%exclude %{pylibdir}/test/ssl_key.pem
+%exclude %{pylibdir}/test/capath
+%exclude %{pylibdir}/test/*.pem
+%exclude %{pylibdir}/test/*.crl
 %{dynload_dir}/_ctypes_test.%{SOABI_optimized}.so
 %{dynload_dir}/_testbuffer.%{SOABI_optimized}.so
 %{dynload_dir}/_testcapi.%{SOABI_optimized}.so
+%{dynload_dir}/_testinternalcapi.%{SOABI_optimized}.so
 %{dynload_dir}/_testimportmultiple.%{SOABI_optimized}.so
 %{dynload_dir}/_xxtestfuzz.%{SOABI_optimized}.so
 %{pylibdir}/lib2to3/tests
@@ -789,6 +759,9 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{dynload_dir}/_uuid.%{SOABI_debug}.so
 %{dynload_dir}/_xxtestfuzz.%{SOABI_debug}.so
 %{dynload_dir}/zlib.%{SOABI_debug}.so
+%{dynload_dir}/_statistics.%{SOABI_debug}.so
+%{dynload_dir}/_xxsubinterpreters.%{SOABI_debug}.so
+%{dynload_dir}/_posixshmem.%{SOABI_debug}.so
 
 %{_libdir}/%{py_INSTSONAME_debug}
 
@@ -799,6 +772,7 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_libdir}/libpython%{LDVERSION_debug}.so
 %{_libdir}/libpython%{LDVERSION_debug}.so.1.0
 %{_libdir}/pkgconfig/python-%{LDVERSION_debug}.pc
+%{_libdir}/pkgconfig/python-%{LDVERSION_debug}-embed.pc
 
 %{dynload_dir}/_tkinter.%{SOABI_debug}.so
 
@@ -806,6 +780,7 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{dynload_dir}/_testbuffer.%{SOABI_debug}.so
 %{dynload_dir}/_testcapi.%{SOABI_debug}.so
 %{dynload_dir}/_testimportmultiple.%{SOABI_debug}.so
+%{dynload_dir}/_testinternalcapi.%{SOABI_debug}.so
 
 %undefine _debuginfo_subpackages
 
@@ -813,6 +788,9 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Fri Jun 5 2020 hanxinke<hanxinke@huawei.com> - 3.8.3-1
+- Update to Python 3.8.3
+
 * Tue Jun 2 2020 hanxinke<hanxinke@huawei.com> - 3.7.4-11
 - Type:bugfix
 - ID:NA
@@ -855,7 +833,7 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 - SUG:NA
 - DESC:update spec file
 
-* Thu Dec 24 2019 openEuler Buildteam <buildteam@openeuler.org> - 3.7.4-4
+* Tue Dec 24 2019 openEuler Buildteam <buildteam@openeuler.org> - 3.7.4-4
 - fix CVE-2019-16056 CVE-2019-16935 CVE-2019-17514
 - Delete the test keys, fix BEP problem
 
