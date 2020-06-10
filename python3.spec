@@ -96,6 +96,7 @@ Patch251: 00251-change-user-install-location.patch
 
 Provides: python%{branchversion} = %{version}-%{release}
 Provides: python(abi) = %{branchversion}
+Provides: python(abi) = 3.7
 
 Provides: python%{pyshortver} = %{version}-%{release}
 Obsoletes: python%{pyshortver}
