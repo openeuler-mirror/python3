@@ -1,5 +1,4 @@
-version_control: NA
-src_repo: 
-tag_prefix: 
-seperator: 
-url: https://www.python.org/downloads/
+version_control: github
+src_repo: python/cpython
+tag_prefix: ^v
+seperator: .
