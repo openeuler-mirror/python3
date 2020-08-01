@@ -2,7 +2,7 @@ Name: python3
 Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
-Version: 3.8.3
+Version: 3.8.5
 Release: 1
 License: Python
 
@@ -392,7 +392,6 @@ LD_LIBRARY_PATH=$(pwd)/build/debug $(pwd)/build/debug/python -m test.regrtest \
     -x test_asyncio
 
 export OPENSSL_CONF=/non-existing-file
-
 LD_LIBRARY_PATH=$(pwd)/build/optimized $(pwd)/build/optimized/python -m test.pythoninfo
 
 WITHIN_PYTHON_RPM_BUILD= \
@@ -789,6 +788,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Sat Aug 1 2020 wenzhanli<wenzhanli2@huawei.com> - 3.8.5-1
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:update version 3.8.5
+
 * Fri Jun 5 2020 hanxinke<hanxinke@huawei.com> - 3.8.3-1
 - Update to Python 3.8.3
 
