@@ -69,7 +69,9 @@ BuildRequires: tcl-devel
 BuildRequires: tix-devel
 BuildRequires: tk-devel
 
+%ifarch %{valgrind_arches}
 BuildRequires: valgrind-devel
+%endif
 
 BuildRequires: xz-devel
 BuildRequires: zlib-devel
@@ -229,7 +231,9 @@ pushd ${DebugBuildDir}
   --enable-loadable-sqlite-extensions \
   --with-dtrace \
   --with-ssl-default-suites=openssl \
+%ifarch %{valgrind_arches}
   --with-valgrind \
+%endif
   --without-ensurepip \
   --with-pydebug
 
@@ -253,7 +257,9 @@ pushd ${OptimizedBuildDir}
   --enable-loadable-sqlite-extensions \
   --with-dtrace \
   --with-ssl-default-suites=openssl \
+%ifarch %{valgrind_arches}
   --with-valgrind \
+%endif
   --without-ensurepip \
   %{optimizations_flag}
 
