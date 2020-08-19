@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.8.5
-Release: 1
+Release: 2
 License: Python
 
 %global branchversion 3.8
@@ -794,6 +794,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Tue Aug 19 2020 whoisxxx<zhangxuzhou4@huawei.com> - 3.8.5-2
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: Judge arch before use valgrind
+
 * Sat Aug 1 2020 wenzhanli<wenzhanli2@huawei.com> - 3.8.5-1
 - Type:bugfix
 - ID:NA
