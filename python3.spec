@@ -2,8 +2,8 @@ Name: python3
 Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
-Version: 3.7.4
-Release: 11
+Version: 3.7.9
+Release: 1
 License: Python
 
 %global branchversion 3.7
@@ -101,11 +101,8 @@ Patch205: 00205-make-libpl-respect-lib64.patch
 Patch251: 00251-change-user-install-location.patch
 Patch316: 00316-mark-bdist_wininst-unsupported.patch
 
-Patch6000:	CVE-2019-16056.patch
-Patch6001:	CVE-2019-16935.patch
-Patch6002:	CVE-2019-17514.patch
-Patch6003:	CVE-2019-9674.patch
-Patch6004:	backport-CVE-2019-20907.patch
+Patch6000:	CVE-2019-17514.patch
+Patch6001:	CVE-2019-9674.patch
 
 Patch9000: python3-add-generic-os-support.patch
 
@@ -197,9 +194,6 @@ rm Lib/ensurepip/_bundled/*.whl
 
 %patch6000 -p1
 %patch6001 -p1
-%patch6002 -p1
-%patch6003 -p1
-%patch6004 -p1
 
 %patch9000 -p1
 
@@ -803,6 +797,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Mon Aug 31 2020 shixuantong<shixuantong@huawei.com> - 3.7.9-1
+- Type:NA
+- ID:NA
+- SUG:NA
+- DESC:update version to 3.7.9
+
 * Tue Aug 4 2020 wenzhanli<wenzhanli2@huawei.com> - 3.7.4-11
 - Type:cves
 - ID:NA
