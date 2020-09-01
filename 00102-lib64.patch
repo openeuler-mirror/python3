@@ -155,7 +155,7 @@ index 85e737b..2a1fc79 100644
      /* Replace "00" with version */
      size_t bufsz = wcslen(calculate->zip_path);
 @@ -867,7 +867,7 @@ calculate_init(PyCalculatePath *calculate,
-     if (!calculate->prefix) {
+     if (!calculate->exec_prefix) {
          return DECODE_LOCALE_ERR("EXEC_PREFIX define", len);
      }
 -    calculate->lib_python = Py_DecodeLocale("lib/python" VERSION, &len);
@@ -163,6 +163,7 @@ index 85e737b..2a1fc79 100644
      if (!calculate->lib_python) {
          return DECODE_LOCALE_ERR("EXEC_PREFIX define", len);
      }
+     
 diff --git a/setup.py b/setup.py
 index f1933f7..450cd8a 100644
 --- a/setup.py

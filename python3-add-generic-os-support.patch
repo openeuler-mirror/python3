@@ -4,13 +4,13 @@ index 6ab06b5..8d41a4b 100755
 +++ b/Lib/platform.py
 @@ -297,7 +297,7 @@ _release_version = re.compile(r'([^0-9]+)'
  # and http://www.die.net/doc/linux/man/man1/lsb_release.1.html
-
+ 
  _supported_dists = (
 -    'SuSE', 'debian', 'fedora', 'redhat', 'centos',
 +    'SuSE', 'debian', 'fedora', 'redhat', 'centos', 'generic_os',
      'mandrake', 'mandriva', 'rocks', 'slackware', 'yellowdog', 'gentoo',
      'UnitedLinux', 'turbolinux', 'arch', 'mageia')
-
+ 
 @@ -367,6 +367,8 @@ def _linux_distribution(distname, version, id, supported_dists,
          return distname, version, id
      etc.sort()
