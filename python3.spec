@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.9
-Release: 2
+Release: 3
 License: Python
 
 %global branchversion 3.7
@@ -797,6 +797,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Sat Oct 10 2020 tianwei<tianwei12@huawei.com> - 3.7.9-3
+- Type:NA
+- ID:NA
+- SUG:NA
+- DESC:modify patch
+
 * Wed Sep 2 2020 tianwei<tianwei12@huawei.com> - 3.7.9-2
 - Type:NA
 - ID:NA
