@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.9
-Release: 3
+Release: 4
 License: Python
 
 %global branchversion 3.7
@@ -106,7 +106,7 @@ Patch6001:	CVE-2019-9674.patch
 
 Patch9000: python3-add-generic-os-support.patch
 
-Requires: %{name}-help = %{version}
+Recommends: %{name}-help = %{version}-%{release}
 Provides: python%{branchversion} = %{version}-%{release}
 Provides: python(abi) = %{branchversion}
 
@@ -798,6 +798,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Fri Nov 13 2020 wangjie<wangjie294@huawei.com> - 3.7.9-4
+- Type:NA
+- ID:NA
+- SUG:NA
+- DESC:Change the dependency on the help package from requires to recommends
+
 * Fri Nov 6 2020 wangjie<wangjie294@huawei.com> - 3.7.9-3
 - Type:NA
 - ID:NA
