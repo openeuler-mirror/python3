@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.8.5
-Release: 2
+Release: 3
 License: Python
 
 %global branchversion 3.8
@@ -95,6 +95,7 @@ Patch178: 00178-dont-duplicate-flags-in-sysconfig.patch
 Patch189: 00189-use-rpm-wheels.patch
 Patch205: 00205-make-libpl-respect-lib64.patch
 Patch251: 00251-change-user-install-location.patch
+Patch252: CVE-2020-27619.patch
 
 Provides: python%{branchversion} = %{version}-%{release}
 Provides: python(abi) = %{branchversion}
@@ -187,6 +188,7 @@ rm -r Modules/expat
 rm Lib/ensurepip/_bundled/*.whl
 %patch205 -p1
 %patch251 -p1
+%patch252 -p1
 
 rm configure pyconfig.h.in
 
@@ -794,6 +796,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Sat Nov 14 2020 shixuantong<shixuantong@huawei.com> - 3.8.5-3
+- Type:cves
+- ID:CVE-2020-27619
+- SUG:NA
+- DESC:fix CVE-2020-27619
+
 * Tue Aug 19 2020 whoisxxx<zhangxuzhou4@huawei.com> - 3.8.5-2
 - Type:bugfix
 - ID:NA
