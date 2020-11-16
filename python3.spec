@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.9
-Release: 4
+Release: 5
 License: Python
 
 %global branchversion 3.7
@@ -100,11 +100,10 @@ Patch189: 00189-use-rpm-wheels.patch
 Patch205: 00205-make-libpl-respect-lib64.patch
 Patch251: 00251-change-user-install-location.patch
 Patch316: 00316-mark-bdist_wininst-unsupported.patch
-
-Patch6000:	CVE-2019-17514.patch
-Patch6001:	CVE-2019-9674.patch
-
-Patch9000: python3-add-generic-os-support.patch
+Patch317: CVE-2019-17514.patch
+Patch318: CVE-2019-9674.patch
+Patch319: python3-add-generic-os-support.patch
+Patch320: CVE-2020-27619.patch
 
 Recommends: %{name}-help = %{version}-%{release}
 Provides: python%{branchversion} = %{version}-%{release}
@@ -192,11 +191,10 @@ rm Lib/ensurepip/_bundled/*.whl
 %patch205 -p1
 %patch251 -p1
 %patch316 -p1
-
-%patch6000 -p1
-%patch6001 -p1
-
-%patch9000 -p1
+%patch317 -p1
+%patch318 -p1
+%patch319 -p1
+%patch320 -p1
 
 sed -i "s/generic_os/%{_vendor}/g" Lib/platform.py
 rm configure pyconfig.h.in
@@ -798,6 +796,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Mon Nov 16 2020 shixuantong<shixuantong@huawei.com> - 3.7.9-5
+- Type:cves
+- ID:CVE-2020-27619
+- SUG:NA
+- DESC:fix CVE-2020-27619
+
 * Fri Nov 13 2020 wangjie<wangjie294@huawei.com> - 3.7.9-4
 - Type:NA
 - ID:NA
