@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.8.5
-Release: 4
+Release: 3
 License: Python
 
 %global branchversion 3.8
@@ -792,13 +792,13 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
-* Mon Feb 01 2021 shixuantong<shixuantong@huawei.com> - 3.8.5-4
+* Mon Feb 01 2021 shixuantong<shixuantong@huawei.com> - 3.8.5-3
 - Type:bugfix
 - ID:NA
 - SUG:NA
 - DESC:Fix a reference leak if a thread is not joined
 
-* Sat Nov 14 2020 shixuantong<shixuantong@huawei.com> - 3.8.5-3
+* Sat Nov 14 2020 shixuantong<shixuantong@huawei.com> - 3.8.5-2
 - Type:cves
 - ID:CVE-2020-27619
 - SUG:NA
