@@ -104,6 +104,7 @@ Patch317: CVE-2019-17514.patch
 Patch318: CVE-2019-9674.patch
 Patch319: python3-add-generic-os-support.patch
 Patch320: CVE-2020-27619.patch
+Patch321: backport-Fix-a-reference-leak-if-a-thread-is-not-joined.patch
 
 Recommends: %{name}-help = %{version}-%{release}
 Provides: python%{branchversion} = %{version}-%{release}
@@ -195,6 +196,7 @@ rm Lib/ensurepip/_bundled/*.whl
 %patch318 -p1
 %patch319 -p1
 %patch320 -p1
+%patch321 -p1
 
 sed -i "s/generic_os/%{_vendor}/g" Lib/platform.py
 rm configure pyconfig.h.in
@@ -796,13 +798,13 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
-* Sat Dec 12 2020 tianwei<tianwei@huawei.com> - 3.7.9-6
-- Type:NA
+* Mon Feb 01 2021 shixuantong<shixuantong@huawei.com> - 3.7.9-6
+- Type:bugfix
 - ID:NA
 - SUG:NA
-- DESC:modify python wheels patch for check fail
+- DESC:Fix a reference leak if a thread is not joined
 
-* Mon Nov 16 2020 shixuantong<shixuantong@huawei.com> - 3.7.9-5
+* Sat Nov 14 2020 shixuantong<shixuantong@huawei.com> - 3.7.9-5
 - Type:cves
 - ID:CVE-2020-27619
 - SUG:NA
