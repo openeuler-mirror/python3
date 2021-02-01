@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.8.5
-Release: 3
+Release: 4
 License: Python
 
 %global branchversion 3.8
@@ -96,6 +96,7 @@ Patch189: 00189-use-rpm-wheels.patch
 Patch205: 00205-make-libpl-respect-lib64.patch
 Patch251: 00251-change-user-install-location.patch
 Patch252: CVE-2020-27619.patch
+Patch253: backport-Fix-a-reference-leak-if-a-thread-is-not-joined.patch
 
 Provides: python%{branchversion} = %{version}-%{release}
 Provides: python(abi) = %{branchversion}
@@ -189,6 +190,7 @@ rm Lib/ensurepip/_bundled/*.whl
 %patch205 -p1
 %patch251 -p1
 %patch252 -p1
+%patch253 -p1
 
 rm configure pyconfig.h.in
 
@@ -796,6 +798,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Mon Feb 01 2021 shixuantong<shixuantong@huawei.com> - 3.8.5-4
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:Fix a reference leak if a thread is not joined
+
 * Sat Nov 14 2020 shixuantong<shixuantong@huawei.com> - 3.8.5-3
 - Type:cves
 - ID:CVE-2020-27619
