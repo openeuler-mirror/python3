@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.9
-Release: 6
+Release: 7
 License: Python
 
 %global branchversion 3.7
@@ -798,13 +798,19 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
-* Mon Feb 01 2021 shixuantong<shixuantong@huawei.com> - 3.7.9-6
+* Mon Feb 01 2021 shixuantong<shixuantong@huawei.com> - 3.7.9-7
 - Type:bugfix
 - ID:NA
 - SUG:NA
 - DESC:Fix a reference leak if a thread is not joined
 
-* Sat Nov 14 2020 shixuantong<shixuantong@huawei.com> - 3.7.9-5
+* Sat Dec 12 2020 tianwei<tianwei@huawei.com> - 3.7.9-6
+- Type:NA
+- ID:NA
+- SUG:NA
+- DESC:modify python wheels patch for check fail
+
+* Mon Nov 16 2020 shixuantong<shixuantong@huawei.com> - 3.7.9-5
 - Type:cves
 - ID:CVE-2020-27619
 - SUG:NA
