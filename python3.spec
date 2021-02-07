@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.8.5
-Release: 4
+Release: 5
 License: Python
 
 %global branchversion 3.8
@@ -97,6 +97,7 @@ Patch205: 00205-make-libpl-respect-lib64.patch
 Patch251: 00251-change-user-install-location.patch
 Patch252: CVE-2020-27619.patch
 Patch253: backport-Fix-a-reference-leak-if-a-thread-is-not-joined.patch
+Patch254: CVE-2021-3177.patch
 
 Provides: python%{branchversion} = %{version}-%{release}
 Provides: python(abi) = %{branchversion}
@@ -191,6 +192,7 @@ rm Lib/ensurepip/_bundled/*.whl
 %patch251 -p1
 %patch252 -p1
 %patch253 -p1
+%patch254 -p1
 
 rm configure pyconfig.h.in
 
@@ -798,6 +800,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Sun Feb 07 2021 shangyibin<shangyibin1@huawei.com> - 3.8.5-5
+- Type:cves
+- ID:CVE-2021-3177
+- SUG:NA
+- DESC:fix CVE-2021-3177
+
 * Mon Feb 01 2021 shixuantong<shixuantong@huawei.com> - 3.8.5-4
 - Type:bugfix
 - ID:NA
