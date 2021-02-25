@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.9
-Release: 8
+Release: 9
 License: Python
 
 %global branchversion 3.7
@@ -104,7 +104,6 @@ Patch317: CVE-2019-17514.patch
 Patch318: CVE-2019-9674.patch
 Patch319: python3-add-generic-os-support.patch
 Patch320: CVE-2020-27619.patch
-Patch321: backport-Fix-a-reference-leak-if-a-thread-is-not-joined.patch
 Patch323: CVE-2021-3177.patch
 
 Recommends: %{name}-help = %{version}-%{release}
@@ -197,7 +196,6 @@ rm Lib/ensurepip/_bundled/*.whl
 %patch318 -p1
 %patch319 -p1
 %patch320 -p1
-%patch321 -p1
 %patch323 -p1
 
 sed -i "s/generic_os/%{_vendor}/g" Lib/platform.py
@@ -800,6 +798,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Wed Feb 24 2021 hehuazhen<hehuazhen@huawei.com> - 3.7.9-9
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:revert fix a reference leak if a thread is not joined
+
 * Sun Feb 07 2021 shangyibin<shangyibin1@huawei.com> - 3.7.9-8
 - Type:cves
 - ID:CVE-2021-3177
