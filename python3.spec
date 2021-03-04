@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.9
-Release: 8
+Release: 9
 License: Python
 
 %global branchversion 3.7
@@ -106,6 +106,7 @@ Patch319: python3-add-generic-os-support.patch
 Patch320: CVE-2020-27619.patch
 
 Patch6000: CVE-2021-3177.patch
+Patch6001: backport-CVE-2021-23336.patch
 
 Recommends: %{name}-help = %{version}-%{release}
 Provides: python%{branchversion} = %{version}-%{release}
@@ -198,6 +199,7 @@ rm Lib/ensurepip/_bundled/*.whl
 %patch319 -p1
 %patch320 -p1
 %patch6000 -p1
+%patch6001 -p1
 
 sed -i "s/generic_os/%{_vendor}/g" Lib/platform.py
 rm configure pyconfig.h.in
@@ -799,6 +801,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Web Mar 03 2021 wuchaochao<wuchaochao4@huawei.com> - 3.7.9-9
+- Type:cves
+- ID:CVE-2021-23336
+- SUG:NA
+- DESC:fix CVE-2021-23336
+
 * Wed Feb 24 2021 hehuazhen<hehuazhen@huawei.com> - 3.7.9-8
 - Type:bugfix
 - ID:NA
