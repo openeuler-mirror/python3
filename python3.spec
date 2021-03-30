@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.8.5
-Release: 7
+Release: 8
 License: Python
 
 %global branchversion 3.8
@@ -800,6 +800,13 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Thu Mar 30 2021 shenyangyang<shenyangyang4@huawei.com> - 3.8.5-8
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:Rebuild for openEuler-rpm-config moving /usr/lib/rpm/openEuler/xxxx
+       to /usr/lib/xxxx
+
 * Web Mar 03 2021 wuchaochao<wuchaochao4@huawei.com> - 3.8.5-7
 - Type:cves
 - ID:CVE-2021-23336
