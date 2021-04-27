@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.8.5
-Release: 8
+Release: 9
 License: Python
 
 %global branchversion 3.8
@@ -98,6 +98,7 @@ Patch251: 00251-change-user-install-location.patch
 Patch252: CVE-2020-27619.patch
 Patch254: CVE-2021-3177.patch
 Patch255: backport-CVE-2021-23336.patch
+Patch256: backport-Remove-thread-objects-which-finished-process-its-request.patch
 
 Provides: python%{branchversion} = %{version}-%{release}
 Provides: python(abi) = %{branchversion}
@@ -193,6 +194,7 @@ rm Lib/ensurepip/_bundled/*.whl
 %patch252 -p1
 %patch254 -p1
 %patch255 -p1
+%patch256 -p1
 
 rm configure pyconfig.h.in
 
@@ -800,6 +802,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Tue Apr 27 2021 BruceGW<gyl93216@163.com> - 3.8.5-9
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: fix memory leak in socketserver.ThreadingMixIn
+
 * Thu Mar 30 2021 shenyangyang<shenyangyang4@huawei.com> - 3.8.5-8
 - Type:bugfix
 - ID:NA
