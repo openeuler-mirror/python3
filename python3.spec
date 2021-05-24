@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.9
-Release: 10
+Release: 11
 License: Python
 
 %global branchversion 3.7
@@ -801,6 +801,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Mon May 24 2021 hehuazhen<hehuazhen@huawei.com> - 3.7.9-11
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:update use rpm wheels patch and fix test case failure
+
 * Thu Mar 30 2021 shenyangyang<shenyangyang4@huawei.com> - 3.7.9-10
 - Type:bugfix
 - ID:NA
