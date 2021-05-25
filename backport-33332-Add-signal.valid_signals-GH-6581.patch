@@ -1,0 +1,458 @@
+From 2d0f8adba1764f0b242b15c4f0c67a791fb11e46 Mon Sep 17 00:00:00 2001
+From: Antoine Pitrou <pitrou@free.fr>
+Date: Fri, 4 May 2018 13:00:50 +0200
+Subject: [PATCH] bpo-33332: Add signal.valid_signals() (GH-6581)
+
+Conflict:NA
+Reference:https://github.com/python/cpython/commit/9d3627e311211a1b4abcda29c36fe4afe2c46532
+
+Signed-off-by: hanxinke <hanxinke@huawei.com>
+---
+ Doc/library/signal.rst                        |  9 ++-
+ Lib/asyncio/unix_events.py                    |  4 +-
+ Lib/multiprocessing/resource_sharer.py        |  2 +-
+ Lib/signal.py                                 | 10 ++-
+ Lib/test/support/__init__.py                  |  2 +-
+ Lib/test/test_asyncio/test_unix_events.py     | 12 ++++
+ Lib/test/test_signal.py                       | 30 +++++++++
+ .../2018-04-23-21-41-30.bpo-33332.Y6OZ8Z.rst  |  2 +
+ Modules/clinic/signalmodule.c.h               | 29 +++++++++
+ Modules/signalmodule.c                        | 64 +++++++++++++++++--
+ configure                                     |  2 +-
+ configure.ac                                  |  2 +-
+ pyconfig.h.in                                 |  3 +
+ 13 files changed, 156 insertions(+), 15 deletions(-)
+ create mode 100644 Misc/NEWS.d/next/Library/2018-04-23-21-41-30.bpo-33332.Y6OZ8Z.rst
+
+diff --git a/Doc/library/signal.rst b/Doc/library/signal.rst
+index 7f48f8c..f39e0b2 100644
+--- a/Doc/library/signal.rst
++++ b/Doc/library/signal.rst
+@@ -313,6 +313,11 @@ The :mod:`signal` module defines the following functions:
+    previously in use, and ``None`` means that the previous signal handler was not
+    installed from Python.
+ 
++.. function:: valid_signals()
++
++   Return the set of valid signal numbers on this platform.  This can be
++   less than ``range(1, NSIG)`` if some signals are reserved by the system
++   for internal use.
+ 
+ .. function:: pause()
+ 
+@@ -368,8 +373,8 @@ The :mod:`signal` module defines the following functions:
+      argument.
+ 
+    *mask* is a set of signal numbers (e.g. {:const:`signal.SIGINT`,
+-   :const:`signal.SIGTERM`}). Use ``range(1, signal.NSIG)`` for a full mask
+-   including all signals.
++   :const:`signal.SIGTERM`}). Use :func:`~signal.valid_signals` for a full
++   mask including all signals.
+ 
+    For example, ``signal.pthread_sigmask(signal.SIG_BLOCK, [])`` reads the
+    signal mask of the calling thread.
+diff --git a/Lib/asyncio/unix_events.py b/Lib/asyncio/unix_events.py
+index e037e12..4c1bf40 100644
+--- a/Lib/asyncio/unix_events.py
++++ b/Lib/asyncio/unix_events.py
+@@ -168,8 +168,8 @@ class _UnixSelectorEventLoop(selector_events.BaseSelectorEventLoop):
+         if not isinstance(sig, int):
+             raise TypeError(f'sig must be an int, not {sig!r}')
+ 
+-        if not (1 <= sig < signal.NSIG):
+-            raise ValueError(f'sig {sig} out of range(1, {signal.NSIG})')
++        if sig not in signal.valid_signals():
++            raise ValueError(f'invalid signal number {sig}')
+ 
+     def _make_read_pipe_transport(self, pipe, protocol, waiter=None,
+                                   extra=None):
+diff --git a/Lib/multiprocessing/resource_sharer.py b/Lib/multiprocessing/resource_sharer.py
+index c8f18ea..8d5c990 100644
+--- a/Lib/multiprocessing/resource_sharer.py
++++ b/Lib/multiprocessing/resource_sharer.py
+@@ -136,7 +136,7 @@ class _ResourceSharer(object):
+ 
+     def _serve(self):
+         if hasattr(signal, 'pthread_sigmask'):
+-            signal.pthread_sigmask(signal.SIG_BLOCK, range(1, signal.NSIG))
++            signal.pthread_sigmask(signal.SIG_BLOCK, signal.valid_signals())
+         while 1:
+             try:
+                 with self._listener.accept() as conn:
+diff --git a/Lib/signal.py b/Lib/signal.py
+index 9f05c91..826b62c 100644
+--- a/Lib/signal.py
++++ b/Lib/signal.py
+@@ -65,8 +65,7 @@ if 'pthread_sigmask' in _globals:
+ if 'sigpending' in _globals:
+     @_wraps(_signal.sigpending)
+     def sigpending():
+-        sigs = _signal.sigpending()
+-        return set(_int_to_enum(x, Signals) for x in sigs)
++        return {_int_to_enum(x, Signals) for x in _signal.sigpending()}
+ 
+ 
+ if 'sigwait' in _globals:
+@@ -76,4 +75,11 @@ if 'sigwait' in _globals:
+         return _int_to_enum(retsig, Signals)
+     sigwait.__doc__ = _signal.sigwait
+ 
++
++if 'valid_signals' in _globals:
++    @_wraps(_signal.valid_signals)
++    def valid_signals():
++        return {_int_to_enum(x, Signals) for x in _signal.valid_signals()}
++
++
+ del _globals, _wraps
+diff --git a/Lib/test/support/__init__.py b/Lib/test/support/__init__.py
+index b78451b..f0c6327 100644
+--- a/Lib/test/support/__init__.py
++++ b/Lib/test/support/__init__.py
+@@ -2901,7 +2901,7 @@ class SaveSignals:
+     def __init__(self):
+         import signal
+         self.signal = signal
+-        self.signals = list(range(1, signal.NSIG))
++        self.signals = signal.valid_signals()
+         # SIGKILL and SIGSTOP signals cannot be ignored nor caught
+         for signame in ('SIGKILL', 'SIGSTOP'):
+             try:
+diff --git a/Lib/test/test_asyncio/test_unix_events.py b/Lib/test/test_asyncio/test_unix_events.py
+index 66a6bc1..bbdfd16 100644
+--- a/Lib/test/test_asyncio/test_unix_events.py
++++ b/Lib/test/test_asyncio/test_unix_events.py
+@@ -69,6 +69,7 @@ class SelectorEventLoopSignalTests(test_utils.TestCase):
+     @mock.patch('asyncio.unix_events.signal')
+     def test_add_signal_handler_setup_error(self, m_signal):
+         m_signal.NSIG = signal.NSIG
++        m_signal.valid_signals = signal.valid_signals
+         m_signal.set_wakeup_fd.side_effect = ValueError
+ 
+         self.assertRaises(
+@@ -96,6 +97,7 @@ class SelectorEventLoopSignalTests(test_utils.TestCase):
+     @mock.patch('asyncio.unix_events.signal')
+     def test_add_signal_handler(self, m_signal):
+         m_signal.NSIG = signal.NSIG
++        m_signal.valid_signals = signal.valid_signals
+ 
+         cb = lambda: True
+         self.loop.add_signal_handler(signal.SIGHUP, cb)
+@@ -106,6 +108,7 @@ class SelectorEventLoopSignalTests(test_utils.TestCase):
+     @mock.patch('asyncio.unix_events.signal')
+     def test_add_signal_handler_install_error(self, m_signal):
+         m_signal.NSIG = signal.NSIG
++        m_signal.valid_signals = signal.valid_signals
+ 
+         def set_wakeup_fd(fd):
+             if fd == -1:
+@@ -125,6 +128,7 @@ class SelectorEventLoopSignalTests(test_utils.TestCase):
+     @mock.patch('asyncio.base_events.logger')
+     def test_add_signal_handler_install_error2(self, m_logging, m_signal):
+         m_signal.NSIG = signal.NSIG
++        m_signal.valid_signals = signal.valid_signals
+ 
+         class Err(OSError):
+             errno = errno.EINVAL
+@@ -145,6 +149,7 @@ class SelectorEventLoopSignalTests(test_utils.TestCase):
+             errno = errno.EINVAL
+         m_signal.signal.side_effect = Err
+         m_signal.NSIG = signal.NSIG
++        m_signal.valid_signals = signal.valid_signals
+ 
+         self.assertRaises(
+             RuntimeError,
+@@ -156,6 +161,7 @@ class SelectorEventLoopSignalTests(test_utils.TestCase):
+     @mock.patch('asyncio.unix_events.signal')
+     def test_remove_signal_handler(self, m_signal):
+         m_signal.NSIG = signal.NSIG
++        m_signal.valid_signals = signal.valid_signals
+ 
+         self.loop.add_signal_handler(signal.SIGHUP, lambda: True)
+ 
+@@ -170,6 +176,7 @@ class SelectorEventLoopSignalTests(test_utils.TestCase):
+     def test_remove_signal_handler_2(self, m_signal):
+         m_signal.NSIG = signal.NSIG
+         m_signal.SIGINT = signal.SIGINT
++        m_signal.valid_signals = signal.valid_signals
+ 
+         self.loop.add_signal_handler(signal.SIGINT, lambda: True)
+         self.loop._signal_handlers[signal.SIGHUP] = object()
+@@ -187,6 +194,7 @@ class SelectorEventLoopSignalTests(test_utils.TestCase):
+     @mock.patch('asyncio.base_events.logger')
+     def test_remove_signal_handler_cleanup_error(self, m_logging, m_signal):
+         m_signal.NSIG = signal.NSIG
++        m_signal.valid_signals = signal.valid_signals
+         self.loop.add_signal_handler(signal.SIGHUP, lambda: True)
+ 
+         m_signal.set_wakeup_fd.side_effect = ValueError
+@@ -197,6 +205,7 @@ class SelectorEventLoopSignalTests(test_utils.TestCase):
+     @mock.patch('asyncio.unix_events.signal')
+     def test_remove_signal_handler_error(self, m_signal):
+         m_signal.NSIG = signal.NSIG
++        m_signal.valid_signals = signal.valid_signals
+         self.loop.add_signal_handler(signal.SIGHUP, lambda: True)
+ 
+         m_signal.signal.side_effect = OSError
+@@ -207,6 +216,7 @@ class SelectorEventLoopSignalTests(test_utils.TestCase):
+     @mock.patch('asyncio.unix_events.signal')
+     def test_remove_signal_handler_error2(self, m_signal):
+         m_signal.NSIG = signal.NSIG
++        m_signal.valid_signals = signal.valid_signals
+         self.loop.add_signal_handler(signal.SIGHUP, lambda: True)
+ 
+         class Err(OSError):
+@@ -219,6 +229,7 @@ class SelectorEventLoopSignalTests(test_utils.TestCase):
+     @mock.patch('asyncio.unix_events.signal')
+     def test_close(self, m_signal):
+         m_signal.NSIG = signal.NSIG
++        m_signal.valid_signals = signal.valid_signals
+ 
+         self.loop.add_signal_handler(signal.SIGHUP, lambda: True)
+         self.loop.add_signal_handler(signal.SIGCHLD, lambda: True)
+@@ -236,6 +247,7 @@ class SelectorEventLoopSignalTests(test_utils.TestCase):
+     @mock.patch('asyncio.unix_events.signal')
+     def test_close_on_finalizing(self, m_signal, m_sys):
+         m_signal.NSIG = signal.NSIG
++        m_signal.valid_signals = signal.valid_signals
+         self.loop.add_signal_handler(signal.SIGHUP, lambda: True)
+ 
+         self.assertEqual(len(self.loop._signal_handlers), 1)
+diff --git a/Lib/test/test_signal.py b/Lib/test/test_signal.py
+index 406684b..0244650 100644
+--- a/Lib/test/test_signal.py
++++ b/Lib/test/test_signal.py
+@@ -61,9 +61,28 @@ class PosixTests(unittest.TestCase):
+         script = os.path.join(dirname, 'signalinterproctester.py')
+         assert_python_ok(script)
+ 
++    def test_valid_signals(self):
++        s = signal.valid_signals()
++        self.assertIsInstance(s, set)
++        self.assertIn(signal.Signals.SIGINT, s)
++        self.assertIn(signal.Signals.SIGALRM, s)
++        self.assertNotIn(0, s)
++        self.assertNotIn(signal.NSIG, s)
++        self.assertLess(len(s), signal.NSIG)
++
+ 
+ @unittest.skipUnless(sys.platform == "win32", "Windows specific")
+ class WindowsSignalTests(unittest.TestCase):
++
++    def test_valid_signals(self):
++        s = signal.valid_signals()
++        self.assertIsInstance(s, set)
++        self.assertGreaterEqual(len(s), 6)
++        self.assertIn(signal.Signals.SIGINT, s)
++        self.assertNotIn(0, s)
++        self.assertNotIn(signal.NSIG, s)
++        self.assertLess(len(s), signal.NSIG)
++
+     def test_issue9324(self):
+         # Updated for issue #10003, adding SIGBREAK
+         handler = lambda x, y: None
+@@ -941,6 +960,17 @@ class PendingSignalsTests(unittest.TestCase):
+         self.assertRaises(TypeError, signal.pthread_sigmask, 1)
+         self.assertRaises(TypeError, signal.pthread_sigmask, 1, 2, 3)
+         self.assertRaises(OSError, signal.pthread_sigmask, 1700, [])
++        with self.assertRaises(ValueError):
++            signal.pthread_sigmask(signal.SIG_BLOCK, [signal.NSIG])
++
++    @unittest.skipUnless(hasattr(signal, 'pthread_sigmask'),
++                         'need signal.pthread_sigmask()')
++    def test_pthread_sigmask_valid_signals(self):
++        s = signal.pthread_sigmask(signal.SIG_BLOCK, signal.valid_signals())
++        self.addCleanup(signal.pthread_sigmask, signal.SIG_SETMASK, s)
++        # Get current blocked set
++        s = signal.pthread_sigmask(signal.SIG_UNBLOCK, signal.valid_signals())
++        self.assertLessEqual(s, signal.valid_signals())
+ 
+     @unittest.skipUnless(hasattr(signal, 'pthread_sigmask'),
+                          'need signal.pthread_sigmask()')
+diff --git a/Misc/NEWS.d/next/Library/2018-04-23-21-41-30.bpo-33332.Y6OZ8Z.rst b/Misc/NEWS.d/next/Library/2018-04-23-21-41-30.bpo-33332.Y6OZ8Z.rst
+new file mode 100644
+index 0000000..05dca54
+--- /dev/null
++++ b/Misc/NEWS.d/next/Library/2018-04-23-21-41-30.bpo-33332.Y6OZ8Z.rst
+@@ -0,0 +1,2 @@
++Add ``signal.valid_signals()`` to expose the POSIX sigfillset()
++functionality.
+diff --git a/Modules/clinic/signalmodule.c.h b/Modules/clinic/signalmodule.c.h
+index dc3aadf..ac97e80 100644
+--- a/Modules/clinic/signalmodule.c.h
++++ b/Modules/clinic/signalmodule.c.h
+@@ -311,6 +311,31 @@ PyDoc_STRVAR(signal_sigwait__doc__,
+ 
+ #endif /* defined(HAVE_SIGWAIT) */
+ 
++#if (defined(HAVE_SIGFILLSET) || defined(MS_WINDOWS))
++
++PyDoc_STRVAR(signal_valid_signals__doc__,
++"valid_signals($module, /)\n"
++"--\n"
++"\n"
++"Return a set of valid signal numbers on this platform.\n"
++"\n"
++"The signal numbers returned by this function can be safely passed to\n"
++"functions like `pthread_sigmask`.");
++
++#define SIGNAL_VALID_SIGNALS_METHODDEF    \
++    {"valid_signals", (PyCFunction)signal_valid_signals, METH_NOARGS, signal_valid_signals__doc__},
++
++static PyObject *
++signal_valid_signals_impl(PyObject *module);
++
++static PyObject *
++signal_valid_signals(PyObject *module, PyObject *Py_UNUSED(ignored))
++{
++    return signal_valid_signals_impl(module);
++}
++
++#endif /* (defined(HAVE_SIGFILLSET) || defined(MS_WINDOWS)) */
++
+ #if defined(HAVE_SIGWAITINFO)
+ 
+ PyDoc_STRVAR(signal_sigwaitinfo__doc__,
+@@ -429,6 +454,10 @@ exit:
+     #define SIGNAL_SIGWAIT_METHODDEF
+ #endif /* !defined(SIGNAL_SIGWAIT_METHODDEF) */
+ 
++#ifndef SIGNAL_VALID_SIGNALS_METHODDEF
++    #define SIGNAL_VALID_SIGNALS_METHODDEF
++#endif /* !defined(SIGNAL_VALID_SIGNALS_METHODDEF) */
++
+ #ifndef SIGNAL_SIGWAITINFO_METHODDEF
+     #define SIGNAL_SIGWAITINFO_METHODDEF
+ #endif /* !defined(SIGNAL_SIGWAITINFO_METHODDEF) */
+diff --git a/Modules/signalmodule.c b/Modules/signalmodule.c
+index a0722b7..b6b5bf1 100644
+--- a/Modules/signalmodule.c
++++ b/Modules/signalmodule.c
+@@ -774,11 +774,21 @@ iterable_to_sigset(PyObject *iterable, sigset_t *mask)
+         if (signum == -1 && PyErr_Occurred())
+             goto error;
+         if (0 < signum && signum < NSIG) {
+-            /* bpo-33329: ignore sigaddset() return value as it can fail
+-             * for some reserved signals, but we want the `range(1, NSIG)`
+-             * idiom to allow selecting all valid signals.
+-             */
+-            (void) sigaddset(mask, (int)signum);
++            if (sigaddset(mask, (int)signum)) {
++                if (errno != EINVAL) {
++                    /* Probably impossible */
++                    PyErr_SetFromErrno(PyExc_OSError);
++                    goto error;
++                }
++                /* For backwards compatibility, allow idioms such as
++                 * `range(1, NSIG)` but warn about invalid signal numbers
++                 */
++                const char *msg =
++                    "invalid signal number %ld, please use valid_signals()";
++                if (PyErr_WarnFormat(PyExc_RuntimeWarning, 1, msg, signum)) {
++                    goto error;
++                }
++            }
+         }
+         else {
+             PyErr_Format(PyExc_ValueError,
+@@ -934,6 +944,47 @@ signal_sigwait(PyObject *module, PyObject *sigset)
+ #endif   /* #ifdef HAVE_SIGWAIT */
+ 
+ 
++#if defined(HAVE_SIGFILLSET) || defined(MS_WINDOWS)
++
++/*[clinic input]
++signal.valid_signals
++
++Return a set of valid signal numbers on this platform.
++
++The signal numbers returned by this function can be safely passed to
++functions like `pthread_sigmask`.
++[clinic start generated code]*/
++
++static PyObject *
++signal_valid_signals_impl(PyObject *module)
++/*[clinic end generated code: output=1609cffbcfcf1314 input=86a3717ff25288f2]*/
++{
++#ifdef MS_WINDOWS
++#ifdef SIGBREAK
++    PyObject *tup = Py_BuildValue("(iiiiiii)", SIGABRT, SIGBREAK, SIGFPE,
++                                  SIGILL, SIGINT, SIGSEGV, SIGTERM);
++#else
++    PyObject *tup = Py_BuildValue("(iiiiii)", SIGABRT, SIGFPE, SIGILL,
++                                  SIGINT, SIGSEGV, SIGTERM);
++#endif
++    if (tup == NULL) {
++        return NULL;
++    }
++    PyObject *set = PySet_New(tup);
++    Py_DECREF(tup);
++    return set;
++#else
++    sigset_t mask;
++    if (sigemptyset(&mask) || sigfillset(&mask)) {
++        return PyErr_SetFromErrno(PyExc_OSError);
++    }
++    return sigset_to_set(mask);
++#endif
++}
++
++#endif   /* #if defined(HAVE_SIGFILLSET) || defined(MS_WINDOWS) */
++
++
+ #if defined(HAVE_SIGWAITINFO) || defined(HAVE_SIGTIMEDWAIT)
+ static int initialized;
+ static PyStructSequence_Field struct_siginfo_fields[] = {
+@@ -1157,6 +1208,9 @@ static PyMethodDef signal_methods[] = {
+     SIGNAL_SIGWAIT_METHODDEF
+     SIGNAL_SIGWAITINFO_METHODDEF
+     SIGNAL_SIGTIMEDWAIT_METHODDEF
++#if defined(HAVE_SIGFILLSET) || defined(MS_WINDOWS)
++    SIGNAL_VALID_SIGNALS_METHODDEF
++#endif
+     {NULL, NULL}           /* sentinel */
+ };
+ 
+diff --git a/configure b/configure
+index 829dd69..d30ccf5 100755
+--- a/configure
++++ b/configure
+@@ -11506,7 +11506,7 @@ for ac_func in alarm accept4 setitimer getitimer bind_textdomain_codeset chown \
+  setlocale setregid setreuid setresuid setresgid setsid setpgid setpgrp setpriority setuid setvbuf \
+  sched_get_priority_max sched_setaffinity sched_setscheduler sched_setparam \
+  sched_rr_get_interval \
+- sigaction sigaltstack siginterrupt sigpending sigrelse \
++ sigaction sigaltstack sigfillset siginterrupt sigpending sigrelse \
+  sigtimedwait sigwait sigwaitinfo snprintf strftime strlcpy symlinkat sync \
+  sysconf tcgetpgrp tcsetpgrp tempnam timegm times tmpfile tmpnam tmpnam_r \
+  truncate uname unlinkat unsetenv utimensat utimes waitid waitpid wait3 wait4 \
+diff --git a/configure.ac b/configure.ac
+index f1cc8e9..9d4c889 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -3590,7 +3590,7 @@ AC_CHECK_FUNCS(alarm accept4 setitimer getitimer bind_textdomain_codeset chown \
+  setlocale setregid setreuid setresuid setresgid setsid setpgid setpgrp setpriority setuid setvbuf \
+  sched_get_priority_max sched_setaffinity sched_setscheduler sched_setparam \
+  sched_rr_get_interval \
+- sigaction sigaltstack siginterrupt sigpending sigrelse \
++ sigaction sigaltstack sigfillset siginterrupt sigpending sigrelse \
+  sigtimedwait sigwait sigwaitinfo snprintf strftime strlcpy symlinkat sync \
+  sysconf tcgetpgrp tcsetpgrp tempnam timegm times tmpfile tmpnam tmpnam_r \
+  truncate uname unlinkat unsetenv utimensat utimes waitid waitpid wait3 wait4 \
+diff --git a/pyconfig.h.in b/pyconfig.h.in
+index ebab5ff..70cead7 100644
+--- a/pyconfig.h.in
++++ b/pyconfig.h.in
+@@ -899,6 +899,9 @@
+ /* Define to 1 if you have the `sigaltstack' function. */
+ #undef HAVE_SIGALTSTACK
+ 
++/* Define to 1 if you have the `sigfillset' function. */
++#undef HAVE_SIGFILLSET
++
+ /* Define to 1 if `si_band' is a member of `siginfo_t'. */
+ #undef HAVE_SIGINFO_T_SI_BAND
+ 
+-- 
+2.23.0
+
