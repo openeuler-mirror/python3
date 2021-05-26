@@ -1,0 +1,63 @@
+From e63da81ac5d562dfad72fded544fd08566f58de8 Mon Sep 17 00:00:00 2001
+From: Anthony Shaw <anthony.p.shaw@gmail.com>
+Date: Fri, 10 May 2019 12:00:06 +1000
+Subject: [PATCH] bpo-36814: ensure os.posix_spawn() handles None (GH-13144)
+
+Fix an issue where os.posix_spawn() would incorrectly raise a TypeError
+when file_actions is None.
+
+Conflict:NA
+Reference:https://github.com/python/cpython/commit/948ed8c96b6912541a608591efe3e00fb520429a
+
+Signed-off-by: hanxinke <hanxinke@huawei.com>
+---
+ Lib/test/test_posix.py                                   | 9 +++++++++
+ .../Library/2019-05-06-23-13-26.bpo-36814.dSeMz_.rst     | 1 +
+ Modules/posixmodule.c                                    | 2 +-
+ 3 files changed, 11 insertions(+), 1 deletion(-)
+ create mode 100644 Misc/NEWS.d/next/Library/2019-05-06-23-13-26.bpo-36814.dSeMz_.rst
+
+diff --git a/Lib/test/test_posix.py b/Lib/test/test_posix.py
+index 83accd4..9440083 100644
+--- a/Lib/test/test_posix.py
++++ b/Lib/test/test_posix.py
+@@ -1560,6 +1560,15 @@ class _PosixSpawnMixin:
+         with open(envfile) as f:
+             self.assertEqual(f.read(), 'bar')
+ 
++    def test_none_file_actions(self):
++        pid = self.spawn_func(
++            self.NOOP_PROGRAM[0],
++            self.NOOP_PROGRAM,
++            os.environ,
++            file_actions=None
++        )
++        self.assertEqual(os.waitpid(pid, 0), (pid, 0))
++
+     def test_empty_file_actions(self):
+         pid = self.spawn_func(
+             self.NOOP_PROGRAM[0],
+diff --git a/Misc/NEWS.d/next/Library/2019-05-06-23-13-26.bpo-36814.dSeMz_.rst b/Misc/NEWS.d/next/Library/2019-05-06-23-13-26.bpo-36814.dSeMz_.rst
+new file mode 100644
+index 0000000..3f40011
+--- /dev/null
++++ b/Misc/NEWS.d/next/Library/2019-05-06-23-13-26.bpo-36814.dSeMz_.rst
+@@ -0,0 +1 @@
++Fix an issue where os.posix_spawnp() would incorrectly raise a TypeError when file_actions is None.
+\ No newline at end of file
+diff --git a/Modules/posixmodule.c b/Modules/posixmodule.c
+index 129de76..f1ab030 100644
+--- a/Modules/posixmodule.c
++++ b/Modules/posixmodule.c
+@@ -5487,7 +5487,7 @@ py_posix_spawn(int use_posix_spawnp, PyObject *module, path_t *path, PyObject *a
+         goto exit;
+     }
+ 
+-    if (file_actions != NULL) {
++    if (file_actions != NULL && file_actions != Py_None) {
+         /* There is a bug in old versions of glibc that makes some of the
+          * helper functions for manipulating file actions not copy the provided
+          * buffers. The problem is that posix_spawn_file_actions_addopen does not
+-- 
+2.23.0
+

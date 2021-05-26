@@ -1,0 +1,83 @@
+From d2b779f242d19fa0f2c1d8d55014f8dd0e7ca1cf Mon Sep 17 00:00:00 2001
+From: Pablo Galindo <Pablogsal@gmail.com>
+Date: Tue, 19 Jun 2018 09:19:50 +0100
+Subject: [PATCH] bpo-33630: Fix using of freed memory in old versions of glicb
+ for posix_spawn(). (GH-7685)
+
+Conflict:NA
+Reference:https://github.com/python/cpython/commit/cb970730e3ca2522e9b1700dcaf0a06b7e898db6
+
+Signed-off-by: hanxinke <hanxinke@huawei.com>
+---
+ Modules/posixmodule.c | 25 ++++++++++++++++++++++---
+ 1 file changed, 22 insertions(+), 3 deletions(-)
+
+diff --git a/Modules/posixmodule.c b/Modules/posixmodule.c
+index f10fe2b..441c82e 100644
+--- a/Modules/posixmodule.c
++++ b/Modules/posixmodule.c
+@@ -5140,7 +5140,8 @@ enum posix_spawn_file_actions_identifier {
+ 
+ static int
+ parse_file_actions(PyObject *file_actions,
+-                   posix_spawn_file_actions_t *file_actionsp)
++                   posix_spawn_file_actions_t *file_actionsp,
++                   PyObject *temp_buffer)
+ {
+     PyObject *seq;
+     PyObject *file_action = NULL;
+@@ -5185,9 +5186,13 @@ parse_file_actions(PyObject *file_actions,
+                 {
+                     goto fail;
+                 }
++                if (PyList_Append(temp_buffer, path)) {
++                    Py_DECREF(path);
++                    goto fail;
++                }
+                 errno = posix_spawn_file_actions_addopen(file_actionsp,
+                         fd, PyBytes_AS_STRING(path), oflag, (mode_t)mode);
+-                Py_DECREF(path);  /* addopen copied it. */
++                Py_DECREF(path);
+                 if (errno) {
+                     posix_error();
+                     goto fail;
+@@ -5270,6 +5275,7 @@ os_posix_spawn_impl(PyObject *module, path_t *path, PyObject *argv,
+     posix_spawn_file_actions_t *file_actionsp = NULL;
+     Py_ssize_t argc, envc;
+     PyObject *result = NULL;
++    PyObject *temp_buffer = NULL;
+     pid_t pid;
+     int err_code;
+ 
+@@ -5310,7 +5316,19 @@ os_posix_spawn_impl(PyObject *module, path_t *path, PyObject *argv,
+     }
+ 
+     if (file_actions != Py_None) {
+-        if (parse_file_actions(file_actions, &file_actions_buf)) {
++        /* There is a bug in old versions of glibc that makes some of the
++         * helper functions for manipulating file actions not copy the provided
++         * buffers. The problem is that posix_spawn_file_actions_addopen does not
++         * copy the value of path for some old versions of glibc (<2.20).
++         * The use of temp_buffer here is a workaround that keeps the
++         * python objects that own the buffers alive until posix_spawn gets called.
++         * Check https://bugs.python.org/issue33630 and
++         * https://sourceware.org/bugzilla/show_bug.cgi?id=17048 for more info.*/
++        temp_buffer = PyList_New(0);
++        if (!temp_buffer) {
++            goto exit;
++        }
++        if (parse_file_actions(file_actions, &file_actions_buf, temp_buffer)) {
+             goto exit;
+         }
+         file_actionsp = &file_actions_buf;
+@@ -5337,6 +5355,7 @@ exit:
+     if (argvlist) {
+         free_string_array(argvlist, argc);
+     }
++    Py_XDECREF(temp_buffer);
+     return result;
+ }
+ #endif /* HAVE_POSIX_SPAWN */
+-- 
+2.23.0
+
