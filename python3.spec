@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.9
-Release: 13
+Release: 14
 License: Python
 
 %global branchversion 3.7
@@ -141,6 +141,7 @@ Patch6032:  backport-35823-Allow-setsid-after-vfork-on-Linux.-GH-2294.patch
 Patch6033:  backport-42146-Fix-memory-leak-in-subprocess.Popen-in-cas.patch
 Patch6034:  backport-42146-Unify-cleanup-in-subprocess_fork_exec-GH-2.patch
 patch6035:  backport-Remove-thread-objects-which-finished-process-its-request.patch
+patch6036:  backport-CVE-2021-3426.patch
 
 Recommends: %{name}-help = %{version}-%{release}
 Provides: python%{branchversion} = %{version}-%{release}
@@ -268,6 +269,7 @@ rm Lib/ensurepip/_bundled/*.whl
 %patch6033 -p1
 %patch6034 -p1
 %patch6035 -p1
+%patch6036 -p1
 
 sed -i "s/generic_os/%{_vendor}/g" Lib/platform.py
 rm configure pyconfig.h.in
@@ -869,6 +871,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Mon May 31 2021 shixuantong<shixuantong@huawei.com> - 3.7.9-14
+- Type:CVE
+- CVE:CVE-2021-3426
+- SUG:NA
+- DESC:fix CVE-2021-3426
+
 * Sat May 29 2021 BruceGW<gyl93216@163.com> -3.7.9-13
 - Type:bugfix
 - ID:NA
