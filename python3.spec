@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.9
-Release: 12
+Release: 13
 License: Python
 
 %global branchversion 3.7
@@ -108,6 +108,7 @@ Patch320: CVE-2020-27619.patch
 Patch6000: CVE-2021-3177.patch
 Patch6001: backport-CVE-2021-23336.patch
 Patch6002: backport-37788-Fix-reference-leak-when-Thread-is-never-joined.patch
+Patch6003: backport-CVE-2021-3426.patch
 
 Recommends: %{name}-help = %{version}-%{release}
 Provides: python%{branchversion} = %{version}-%{release}
@@ -202,6 +203,7 @@ rm Lib/ensurepip/_bundled/*.whl
 %patch6000 -p1
 %patch6001 -p1
 %patch6002 -p1
+%patch6003 -p1
 
 sed -i "s/generic_os/%{_vendor}/g" Lib/platform.py
 rm configure pyconfig.h.in
@@ -803,6 +805,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Thu Jun 03 2021 shixuantong<shixuantong@huawei.com> - 3.7.9-13
+- Type:cves
+- ID:CVE-2021-3426
+- SUG:NA
+- DESC:fix CVE-2021-3426
+
 * Sat May 29 2021 hanxinke<hanxinke@huawei.com> - 3.7.9-12
 - Type:bugfix
 - ID:NA
