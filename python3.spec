@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.9
-Release: 12
+Release: 13
 License: Python
 
 %global branchversion 3.7
@@ -108,6 +108,7 @@ Patch323: CVE-2021-3177.patch
 Patch324: backport-CVE-2021-23336.patch
 Patch6000: backport-37788-Fix-reference-leak-when-Thread-is-never-joined.patch
 Patch6001: backport-CVE-2021-3426.patch
+Patch6002: backport-Remove-thread-objects-which-finished-process-its-request.patch
 
 Recommends: %{name}-help = %{version}-%{release}
 Provides: python%{branchversion} = %{version}-%{release}
@@ -203,6 +204,7 @@ rm Lib/ensurepip/_bundled/*.whl
 %patch324 -p1
 %patch6000 -p1
 %patch6001 -p1
+%patch6002 -p1
 
 sed -i "s/generic_os/%{_vendor}/g" Lib/platform.py
 rm configure pyconfig.h.in
@@ -804,6 +806,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Mon Jun 07 2021 BruceGW<gyl93216@163.com> - 3.7.9-13
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DES:fix memory leak in socketserver.ThreadingMixIn
+
 * Thu Jun 03 2021 shixuantong<shixuantong@huawei.com> - 3.7.9-12
 - Type:cves
 - ID:CVE-2021-3426
