@@ -1,0 +1,93 @@
+From 26c316254e347dffe64944dcf9ffeb6ee981dc0d Mon Sep 17 00:00:00 2001
+From: William Orr <will@worrbase.com>
+Date: Mon, 1 Oct 2018 22:19:56 -0700
+Subject: [PATCH] closes bpo-34862: Guard definition of convert_sched_param
+ with POSIX_SPAWN_SETSCHEDULER. (GH-9658)
+
+Fixes broken build on OpenBSD-current.
+
+Conflict:NA
+Reference:https://github.com/python/cpython/commit/81574b80e92554adf75c13fa42415beb8be383cb
+
+Signed-off-by: hanxinke <hanxinke@huawei.com>
+---
+ Modules/clinic/posixmodule.c.h |  4 ++--
+ Modules/posixmodule.c          | 10 ++++++----
+ 2 files changed, 8 insertions(+), 6 deletions(-)
+
+diff --git a/Modules/clinic/posixmodule.c.h b/Modules/clinic/posixmodule.c.h
+index 0448aa5..51b30d9 100644
+--- a/Modules/clinic/posixmodule.c.h
++++ b/Modules/clinic/posixmodule.c.h
+@@ -2154,7 +2154,7 @@ exit:
+ 
+ #endif /* defined(HAVE_SCHED_H) && defined(HAVE_SCHED_SETSCHEDULER) */
+ 
+-#if defined(HAVE_SCHED_H) && (defined(HAVE_SCHED_SETSCHEDULER) || defined(HAVE_SCHED_SETPARAM))
++#if defined(HAVE_SCHED_H) && (defined(HAVE_SCHED_SETPARAM) || defined(HAVE_SCHED_SETSCHEDULER) || defined(POSIX_SPAWN_SETSCHEDULER) || defined(POSIX_SPAWN_SETSCHEDPARAM))
+ 
+ PyDoc_STRVAR(os_sched_param__doc__,
+ "sched_param(sched_priority)\n"
+@@ -2186,7 +2186,7 @@ exit:
+     return return_value;
+ }
+ 
+-#endif /* defined(HAVE_SCHED_H) && (defined(HAVE_SCHED_SETSCHEDULER) || defined(HAVE_SCHED_SETPARAM)) */
++#endif /* defined(HAVE_SCHED_H) && (defined(HAVE_SCHED_SETPARAM) || defined(HAVE_SCHED_SETSCHEDULER) || defined(POSIX_SPAWN_SETSCHEDULER) || defined(POSIX_SPAWN_SETSCHEDPARAM)) */
+ 
+ #if defined(HAVE_SCHED_H) && defined(HAVE_SCHED_SETSCHEDULER)
+ 
+diff --git a/Modules/posixmodule.c b/Modules/posixmodule.c
+index 8d0e312..ba7fbef 100644
+--- a/Modules/posixmodule.c
++++ b/Modules/posixmodule.c
+@@ -1937,7 +1937,7 @@ static PyTypeObject WaitidResultType;
+ static int initialized;
+ static PyTypeObject StatResultType;
+ static PyTypeObject StatVFSResultType;
+-#if defined(HAVE_SCHED_SETPARAM) || defined(HAVE_SCHED_SETSCHEDULER)
++#if defined(HAVE_SCHED_SETPARAM) || defined(HAVE_SCHED_SETSCHEDULER) || defined(POSIX_SPAWN_SETSCHEDULER) || defined(POSIX_SPAWN_SETSCHEDPARAM)
+ static PyTypeObject SchedParamType;
+ #endif
+ static newfunc structseq_new;
+@@ -5138,8 +5138,10 @@ enum posix_spawn_file_actions_identifier {
+     POSIX_SPAWN_DUP2
+ };
+ 
++#if defined(HAVE_SCHED_SETPARAM) || defined(HAVE_SCHED_SETSCHEDULER) || defined(POSIX_SPAWN_SETSCHEDULER) || defined(POSIX_SPAWN_SETSCHEDPARAM)
+ static int
+ convert_sched_param(PyObject *param, struct sched_param *res);
++#endif
+ 
+ static int
+ parse_posix_spawn_flags(PyObject *setpgroup, int resetids, PyObject *setsigmask,
+@@ -5961,7 +5963,7 @@ os_sched_getscheduler_impl(PyObject *module, pid_t pid)
+ #endif /* HAVE_SCHED_SETSCHEDULER */
+ 
+ 
+-#if defined(HAVE_SCHED_SETSCHEDULER) || defined(HAVE_SCHED_SETPARAM)
++#if defined(HAVE_SCHED_SETPARAM) || defined(HAVE_SCHED_SETSCHEDULER) || defined(POSIX_SPAWN_SETSCHEDULER) || defined(POSIX_SPAWN_SETSCHEDPARAM)
+ /*[clinic input]
+ class os.sched_param "PyObject *" "&SchedParamType"
+ 
+@@ -6022,7 +6024,7 @@ convert_sched_param(PyObject *param, struct sched_param *res)
+     res->sched_priority = Py_SAFE_DOWNCAST(priority, long, int);
+     return 1;
+ }
+-#endif /* defined(HAVE_SCHED_SETSCHEDULER) || defined(HAVE_SCHED_SETPARAM) */
++#endif /* defined(HAVE_SCHED_SETPARAM) || defined(HAVE_SCHED_SETSCHEDULER) || defined(POSIX_SPAWN_SETSCHEDULER) || defined(POSIX_SPAWN_SETSCHEDPARAM) */
+ 
+ 
+ #ifdef HAVE_SCHED_SETSCHEDULER
+@@ -13977,7 +13979,7 @@ INITFUNC(void)
+ #  endif
+ #endif
+ 
+-#if defined(HAVE_SCHED_SETPARAM) || defined(HAVE_SCHED_SETSCHEDULER)
++#if defined(HAVE_SCHED_SETPARAM) || defined(HAVE_SCHED_SETSCHEDULER) || defined(POSIX_SPAWN_SETSCHEDULER) || defined(POSIX_SPAWN_SETSCHEDPARAM)
+         sched_param_desc.name = MODNAME ".sched_param";
+         if (PyStructSequence_InitType2(&SchedParamType, &sched_param_desc) < 0)
+             return NULL;
+-- 
+2.23.0
+

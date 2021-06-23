@@ -1,0 +1,30 @@
+From 70975d9a05f6d957c669a521071f207dca6002bc Mon Sep 17 00:00:00 2001
+From: Pablo Galindo <Pablogsal@gmail.com>
+Date: Sun, 13 Oct 2019 02:40:24 +0100
+Subject: [PATCH] bpo-38456: Handle the case when there is no 'true' command
+ (GH-16739)
+
+Conflict:NA
+Reference:https://github.com/python/cpython/commit/46113e0cf32748f66cf64cd633984d143b433cd1
+
+Signed-off-by: hanxinke <hanxinke@huawei.com>
+---
+ Lib/test/test_subprocess.py | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/Lib/test/test_subprocess.py b/Lib/test/test_subprocess.py
+index 9820507..ac45436 100644
+--- a/Lib/test/test_subprocess.py
++++ b/Lib/test/test_subprocess.py
+@@ -67,6 +67,8 @@ ZERO_RETURN_CMD = (sys.executable, '-c', 'pass')
+ 
+ def setUpModule():
+     shell_true = shutil.which('true')
++    if shell_true is None:
++        return
+     if (os.access(shell_true, os.X_OK) and
+         subprocess.run([shell_true]).returncode == 0):
+         global ZERO_RETURN_CMD
+-- 
+2.23.0
+

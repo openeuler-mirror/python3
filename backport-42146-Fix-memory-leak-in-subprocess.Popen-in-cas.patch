@@ -1,0 +1,103 @@
+From ee0f0b4f066eb9e44e0e0270eba23ddb60e8b44a Mon Sep 17 00:00:00 2001
+From: Alexey Izbyshev <izbyshev@ispras.ru>
+Date: Mon, 26 Oct 2020 03:09:32 +0300
+Subject: [PATCH] bpo-42146: Fix memory leak in subprocess.Popen() in case of
+ uid/gid overflow (GH-22966)
+
+Fix memory leak in subprocess.Popen() in case of uid/gid overflow
+
+Also add a test that would catch this leak with `--huntrleaks`.
+
+Alas, the test for `extra_groups` also exposes an inconsistency
+in our error reporting: we use a custom ValueError for `extra_groups`,
+but propagate OverflowError for `user` and `group`.
+
+Conflict:NA
+Reference:https://github.com/python/cpython/commit/c0590c0033e86f98cdf5f2ca6898656f98ab4053
+
+Signed-off-by: hanxinke <hanxinke@huawei.com>
+---
+ Lib/test/test_subprocess.py                         | 13 +++++++++++++
+ .../2020-10-25-19-25-02.bpo-42146.6A8uvS.rst        |  2 ++
+ Modules/_posixsubprocess.c                          |  4 ++--
+ 3 files changed, 17 insertions(+), 2 deletions(-)
+ create mode 100644 Misc/NEWS.d/next/Library/2020-10-25-19-25-02.bpo-42146.6A8uvS.rst
+
+diff --git a/Lib/test/test_subprocess.py b/Lib/test/test_subprocess.py
+index bced1e7..e401656 100644
+--- a/Lib/test/test_subprocess.py
++++ b/Lib/test/test_subprocess.py
+@@ -1758,6 +1758,10 @@ class POSIXProcessTestCase(BaseTestCase):
+         with self.assertRaises(ValueError):
+             subprocess.check_call(ZERO_RETURN_CMD, user=-1)
+ 
++        with self.assertRaises(OverflowError):
++            subprocess.check_call(ZERO_RETURN_CMD,
++                                  cwd=os.curdir, env=os.environ, user=2**64)
++
+         if pwd is None and name_uid is not None:
+             with self.assertRaises(ValueError):
+                 subprocess.check_call(ZERO_RETURN_CMD, user=name_uid)
+@@ -1801,6 +1805,10 @@ class POSIXProcessTestCase(BaseTestCase):
+         with self.assertRaises(ValueError):
+             subprocess.check_call(ZERO_RETURN_CMD, group=-1)
+ 
++        with self.assertRaises(OverflowError):
++            subprocess.check_call(ZERO_RETURN_CMD,
++                                  cwd=os.curdir, env=os.environ, group=2**64)
++
+         if grp is None:
+             with self.assertRaises(ValueError):
+                 subprocess.check_call(ZERO_RETURN_CMD, group=name_group)
+@@ -1849,6 +1857,11 @@ class POSIXProcessTestCase(BaseTestCase):
+         with self.assertRaises(ValueError):
+             subprocess.check_call(ZERO_RETURN_CMD, extra_groups=[-1])
+ 
++        with self.assertRaises(ValueError):
++            subprocess.check_call(ZERO_RETURN_CMD,
++                                  cwd=os.curdir, env=os.environ,
++                                  extra_groups=[2**64])
++
+         if grp is None:
+             with self.assertRaises(ValueError):
+                 subprocess.check_call(ZERO_RETURN_CMD,
+diff --git a/Misc/NEWS.d/next/Library/2020-10-25-19-25-02.bpo-42146.6A8uvS.rst b/Misc/NEWS.d/next/Library/2020-10-25-19-25-02.bpo-42146.6A8uvS.rst
+new file mode 100644
+index 0000000..0418098
+--- /dev/null
++++ b/Misc/NEWS.d/next/Library/2020-10-25-19-25-02.bpo-42146.6A8uvS.rst
+@@ -0,0 +1,2 @@
++Fix memory leak in :func:`subprocess.Popen` in case an uid (gid) specified in
++`user` (`group`, `extra_groups`) overflows `uid_t` (`gid_t`).
+diff --git a/Modules/_posixsubprocess.c b/Modules/_posixsubprocess.c
+index 5845445..2981253 100644
+--- a/Modules/_posixsubprocess.c
++++ b/Modules/_posixsubprocess.c
+@@ -759,7 +759,7 @@ subprocess_fork_exec(PyObject* self, PyObject *args)
+     uid_t uid;
+     gid_t gid, *groups = NULL;
+     int child_umask;
+-    PyObject *cwd_obj, *cwd_obj2;
++    PyObject *cwd_obj, *cwd_obj2 = NULL;
+     const char *cwd;
+     pid_t pid;
+     int need_to_reenable_gc = 0;
+@@ -866,7 +866,6 @@ subprocess_fork_exec(PyObject* self, PyObject *args)
+         cwd = PyBytes_AsString(cwd_obj2);
+     } else {
+         cwd = NULL;
+-        cwd_obj2 = NULL;
+     }
+ 
+     if (groups_list != Py_None) {
+@@ -1051,6 +1050,7 @@ subprocess_fork_exec(PyObject* self, PyObject *args)
+     return PyLong_FromPid(pid);
+ 
+ cleanup:
++    Py_XDECREF(cwd_obj2);
+     if (envp)
+         _Py_FreeCharPArray(envp);
+     if (argv)
+-- 
+2.23.0
+
