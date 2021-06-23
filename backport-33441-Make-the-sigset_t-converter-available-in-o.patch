@@ -1,0 +1,459 @@
+From cc17fe8bed98cae0bcb7739c953933d1f379dd12 Mon Sep 17 00:00:00 2001
+From: Serhiy Storchaka <storchaka@gmail.com>
+Date: Tue, 8 May 2018 07:48:50 +0300
+Subject: [PATCH] bpo-33441: Make the sigset_t converter available in other
+ modules. (GH-6720)
+
+* Expose the sigset_t converter via private API _Py_Sigset_Converter().
+* Use Argument Clinic for parsing sigset_t in signalmodule.c.
+* Raise ValueError instead OverflowError for integers out of
+  the C long range.
+
+Based on patch by Pablo Galindo Salgado.
+
+Conflict:NA
+Reference:https://github.com/python/cpython/commit/d54cfb160c626626394e2f171d3ccfe03309f34e
+
+Signed-off-by: hanxinke <hanxinke@huawei.com>
+---
+ Lib/test/test_signal.py         |   4 ++
+ Modules/clinic/signalmodule.c.h |  53 +++++++++++---
+ Modules/posixmodule.c           |  59 ++++++++++++++++
+ Modules/posixmodule.h           |   9 +++
+ Modules/signalmodule.c          | 120 +++++++-------------------------
+ 5 files changed, 141 insertions(+), 104 deletions(-)
+
+diff --git a/Lib/test/test_signal.py b/Lib/test/test_signal.py
+index 0244650..152f803 100644
+--- a/Lib/test/test_signal.py
++++ b/Lib/test/test_signal.py
+@@ -962,6 +962,10 @@ class PendingSignalsTests(unittest.TestCase):
+         self.assertRaises(OSError, signal.pthread_sigmask, 1700, [])
+         with self.assertRaises(ValueError):
+             signal.pthread_sigmask(signal.SIG_BLOCK, [signal.NSIG])
++        with self.assertRaises(ValueError):
++            signal.pthread_sigmask(signal.SIG_BLOCK, [0])
++        with self.assertRaises(ValueError):
++            signal.pthread_sigmask(signal.SIG_BLOCK, [1<<1000])
+ 
+     @unittest.skipUnless(hasattr(signal, 'pthread_sigmask'),
+                          'need signal.pthread_sigmask()')
+diff --git a/Modules/clinic/signalmodule.c.h b/Modules/clinic/signalmodule.c.h
+index ac97e80..811b252 100644
+--- a/Modules/clinic/signalmodule.c.h
++++ b/Modules/clinic/signalmodule.c.h
+@@ -248,17 +248,17 @@ PyDoc_STRVAR(signal_pthread_sigmask__doc__,
+     {"pthread_sigmask", (PyCFunction)signal_pthread_sigmask, METH_FASTCALL, signal_pthread_sigmask__doc__},
+ 
+ static PyObject *
+-signal_pthread_sigmask_impl(PyObject *module, int how, PyObject *mask);
++signal_pthread_sigmask_impl(PyObject *module, int how, sigset_t mask);
+ 
+ static PyObject *
+ signal_pthread_sigmask(PyObject *module, PyObject *const *args, Py_ssize_t nargs)
+ {
+     PyObject *return_value = NULL;
+     int how;
+-    PyObject *mask;
++    sigset_t mask;
+ 
+-    if (!_PyArg_ParseStack(args, nargs, "iO:pthread_sigmask",
+-        &how, &mask)) {
++    if (!_PyArg_ParseStack(args, nargs, "iO&:pthread_sigmask",
++        &how, _Py_Sigset_Converter, &mask)) {
+         goto exit;
+     }
+     return_value = signal_pthread_sigmask_impl(module, how, mask);
+@@ -309,6 +309,24 @@ PyDoc_STRVAR(signal_sigwait__doc__,
+ #define SIGNAL_SIGWAIT_METHODDEF    \
+     {"sigwait", (PyCFunction)signal_sigwait, METH_O, signal_sigwait__doc__},
+ 
++static PyObject *
++signal_sigwait_impl(PyObject *module, sigset_t sigset);
++
++static PyObject *
++signal_sigwait(PyObject *module, PyObject *arg)
++{
++    PyObject *return_value = NULL;
++    sigset_t sigset;
++
++    if (!PyArg_Parse(arg, "O&:sigwait", _Py_Sigset_Converter, &sigset)) {
++        goto exit;
++    }
++    return_value = signal_sigwait_impl(module, sigset);
++
++exit:
++    return return_value;
++}
++
+ #endif /* defined(HAVE_SIGWAIT) */
+ 
+ #if (defined(HAVE_SIGFILLSET) || defined(MS_WINDOWS))
+@@ -349,6 +367,24 @@ PyDoc_STRVAR(signal_sigwaitinfo__doc__,
+ #define SIGNAL_SIGWAITINFO_METHODDEF    \
+     {"sigwaitinfo", (PyCFunction)signal_sigwaitinfo, METH_O, signal_sigwaitinfo__doc__},
+ 
++static PyObject *
++signal_sigwaitinfo_impl(PyObject *module, sigset_t sigset);
++
++static PyObject *
++signal_sigwaitinfo(PyObject *module, PyObject *arg)
++{
++    PyObject *return_value = NULL;
++    sigset_t sigset;
++
++    if (!PyArg_Parse(arg, "O&:sigwaitinfo", _Py_Sigset_Converter, &sigset)) {
++        goto exit;
++    }
++    return_value = signal_sigwaitinfo_impl(module, sigset);
++
++exit:
++    return return_value;
++}
++
+ #endif /* defined(HAVE_SIGWAITINFO) */
+ 
+ #if defined(HAVE_SIGTIMEDWAIT)
+@@ -365,19 +401,18 @@ PyDoc_STRVAR(signal_sigtimedwait__doc__,
+     {"sigtimedwait", (PyCFunction)signal_sigtimedwait, METH_FASTCALL, signal_sigtimedwait__doc__},
+ 
+ static PyObject *
+-signal_sigtimedwait_impl(PyObject *module, PyObject *sigset,
++signal_sigtimedwait_impl(PyObject *module, sigset_t sigset,
+                          PyObject *timeout_obj);
+ 
+ static PyObject *
+ signal_sigtimedwait(PyObject *module, PyObject *const *args, Py_ssize_t nargs)
+ {
+     PyObject *return_value = NULL;
+-    PyObject *sigset;
++    sigset_t sigset;
+     PyObject *timeout_obj;
+ 
+-    if (!_PyArg_UnpackStack(args, nargs, "sigtimedwait",
+-        2, 2,
+-        &sigset, &timeout_obj)) {
++    if (!_PyArg_ParseStack(args, nargs, "O&O:sigtimedwait",
++        _Py_Sigset_Converter, &sigset, &timeout_obj)) {
+         goto exit;
+     }
+     return_value = signal_sigtimedwait_impl(module, sigset, timeout_obj);
+diff --git a/Modules/posixmodule.c b/Modules/posixmodule.c
+index 441c82e..5689f93 100644
+--- a/Modules/posixmodule.c
++++ b/Modules/posixmodule.c
+@@ -1278,6 +1278,65 @@ PyLong_FromPy_off_t(Py_off_t offset)
+ #endif
+ }
+ 
++#ifdef HAVE_SIGSET_T
++/* Convert an iterable of integers to a sigset.
++   Return 1 on success, return 0 and raise an exception on error. */
++int
++_Py_Sigset_Converter(PyObject *obj, void *addr)
++{
++    sigset_t *mask = (sigset_t *)addr;
++    PyObject *iterator, *item;
++    long signum;
++    int overflow;
++
++    if (sigemptyset(mask)) {
++        /* Probably only if mask == NULL. */
++        PyErr_SetFromErrno(PyExc_OSError);
++        return 0;
++    }
++
++    iterator = PyObject_GetIter(obj);
++    if (iterator == NULL) {
++        return 0;
++    }
++
++    while ((item = PyIter_Next(iterator)) != NULL) {
++        signum = PyLong_AsLongAndOverflow(item, &overflow);
++        Py_DECREF(item);
++        if (signum <= 0 || signum >= NSIG) {
++            if (overflow || signum != -1 || !PyErr_Occurred()) {
++                PyErr_Format(PyExc_ValueError,
++                             "signal number %ld out of range", signum);
++            }
++            goto error;
++        }
++        if (sigaddset(mask, (int)signum)) {
++            if (errno != EINVAL) {
++                /* Probably impossible */
++                PyErr_SetFromErrno(PyExc_OSError);
++                goto error;
++            }
++            /* For backwards compatibility, allow idioms such as
++             * `range(1, NSIG)` but warn about invalid signal numbers
++             */
++            const char msg[] =
++                "invalid signal number %ld, please use valid_signals()";
++            if (PyErr_WarnFormat(PyExc_RuntimeWarning, 1, msg, signum)) {
++                goto error;
++            }
++        }
++    }
++    if (!PyErr_Occurred()) {
++        Py_DECREF(iterator);
++        return 1;
++    }
++
++error:
++    Py_DECREF(iterator);
++    return 0;
++}
++#endif /* HAVE_SIGSET_T */
++
+ #ifdef MS_WINDOWS
+ 
+ static int
+diff --git a/Modules/posixmodule.h b/Modules/posixmodule.h
+index 1ec1833..1e00562 100644
+--- a/Modules/posixmodule.h
++++ b/Modules/posixmodule.h
+@@ -17,8 +17,17 @@ PyAPI_FUNC(PyObject *) _PyLong_FromGid(gid_t);
+ PyAPI_FUNC(int) _Py_Uid_Converter(PyObject *, void *);
+ PyAPI_FUNC(int) _Py_Gid_Converter(PyObject *, void *);
+ #endif /* MS_WINDOWS */
++
++#if defined(PYPTHREAD_SIGMASK) || defined(HAVE_SIGWAIT) || \
++        defined(HAVE_SIGWAITINFO) || defined(HAVE_SIGTIMEDWAIT)
++# define HAVE_SIGSET_T
+ #endif
+ 
++#ifdef HAVE_SIGSET_T
++PyAPI_FUNC(int) _Py_Sigset_Converter(PyObject *, void *);
++#endif /* HAVE_SIGSET_T */
++#endif /* Py_LIMITED_API */
++
+ #ifdef __cplusplus
+ }
+ #endif
+diff --git a/Modules/signalmodule.c b/Modules/signalmodule.c
+index b6b5bf1..0a5f190 100644
+--- a/Modules/signalmodule.c
++++ b/Modules/signalmodule.c
+@@ -59,6 +59,14 @@ module signal
+ [clinic start generated code]*/
+ /*[clinic end generated code: output=da39a3ee5e6b4b0d input=b0301a3bde5fe9d3]*/
+ 
++/*[python input]
++
++class sigset_t_converter(CConverter):
++    type = 'sigset_t'
++    converter = '_Py_Sigset_Converter'
++
++[python start generated code]*/
++/*[python end generated code: output=da39a3ee5e6b4b0d input=b5689d14466b6823]*/
+ 
+ /*
+    NOTES ON THE INTERACTION BETWEEN SIGNALS AND THREADS
+@@ -741,69 +749,6 @@ signal_getitimer_impl(PyObject *module, int which)
+ 
+ #endif
+ 
+-#if defined(PYPTHREAD_SIGMASK) || defined(HAVE_SIGWAIT) || \
+-        defined(HAVE_SIGWAITINFO) || defined(HAVE_SIGTIMEDWAIT)
+-/* Convert an iterable to a sigset.
+-   Return 0 on success, return -1 and raise an exception on error. */
+-
+-static int
+-iterable_to_sigset(PyObject *iterable, sigset_t *mask)
+-{
+-    int result = -1;
+-    PyObject *iterator, *item;
+-    long signum;
+-
+-    sigemptyset(mask);
+-
+-    iterator = PyObject_GetIter(iterable);
+-    if (iterator == NULL)
+-        goto error;
+-
+-    while (1)
+-    {
+-        item = PyIter_Next(iterator);
+-        if (item == NULL) {
+-            if (PyErr_Occurred())
+-                goto error;
+-            else
+-                break;
+-        }
+-
+-        signum = PyLong_AsLong(item);
+-        Py_DECREF(item);
+-        if (signum == -1 && PyErr_Occurred())
+-            goto error;
+-        if (0 < signum && signum < NSIG) {
+-            if (sigaddset(mask, (int)signum)) {
+-                if (errno != EINVAL) {
+-                    /* Probably impossible */
+-                    PyErr_SetFromErrno(PyExc_OSError);
+-                    goto error;
+-                }
+-                /* For backwards compatibility, allow idioms such as
+-                 * `range(1, NSIG)` but warn about invalid signal numbers
+-                 */
+-                const char *msg =
+-                    "invalid signal number %ld, please use valid_signals()";
+-                if (PyErr_WarnFormat(PyExc_RuntimeWarning, 1, msg, signum)) {
+-                    goto error;
+-                }
+-            }
+-        }
+-        else {
+-            PyErr_Format(PyExc_ValueError,
+-                         "signal number %ld out of range", signum);
+-            goto error;
+-        }
+-    }
+-    result = 0;
+-
+-error:
+-    Py_XDECREF(iterator);
+-    return result;
+-}
+-#endif
+-
+ #if defined(PYPTHREAD_SIGMASK) || defined(HAVE_SIGPENDING)
+ static PyObject*
+ sigset_to_set(sigset_t mask)
+@@ -846,23 +791,20 @@ sigset_to_set(sigset_t mask)
+ signal.pthread_sigmask
+ 
+     how:  int
+-    mask: object
++    mask: sigset_t
+     /
+ 
+ Fetch and/or change the signal mask of the calling thread.
+ [clinic start generated code]*/
+ 
+ static PyObject *
+-signal_pthread_sigmask_impl(PyObject *module, int how, PyObject *mask)
+-/*[clinic end generated code: output=ff640fe092bc9181 input=f3b7d7a61b7b8283]*/
++signal_pthread_sigmask_impl(PyObject *module, int how, sigset_t mask)
++/*[clinic end generated code: output=0562c0fb192981a8 input=85bcebda442fa77f]*/
+ {
+-    sigset_t newmask, previous;
++    sigset_t previous;
+     int err;
+ 
+-    if (iterable_to_sigset(mask, &newmask))
+-        return NULL;
+-
+-    err = pthread_sigmask(how, &newmask, &previous);
++    err = pthread_sigmask(how, &mask, &previous);
+     if (err != 0) {
+         errno = err;
+         PyErr_SetFromErrno(PyExc_OSError);
+@@ -910,7 +852,7 @@ signal_sigpending_impl(PyObject *module)
+ /*[clinic input]
+ signal.sigwait
+ 
+-    sigset: object
++    sigset: sigset_t
+     /
+ 
+ Wait for a signal.
+@@ -921,17 +863,13 @@ and returns the signal number.
+ [clinic start generated code]*/
+ 
+ static PyObject *
+-signal_sigwait(PyObject *module, PyObject *sigset)
+-/*[clinic end generated code: output=557173647424f6e4 input=11af2d82d83c2e94]*/
++signal_sigwait_impl(PyObject *module, sigset_t sigset)
++/*[clinic end generated code: output=f43770699d682f96 input=a6fbd47b1086d119]*/
+ {
+-    sigset_t set;
+     int err, signum;
+ 
+-    if (iterable_to_sigset(sigset, &set))
+-        return NULL;
+-
+     Py_BEGIN_ALLOW_THREADS
+-    err = sigwait(&set, &signum);
++    err = sigwait(&sigset, &signum);
+     Py_END_ALLOW_THREADS
+     if (err) {
+         errno = err;
+@@ -1046,7 +984,7 @@ fill_siginfo(siginfo_t *si)
+ /*[clinic input]
+ signal.sigwaitinfo
+ 
+-    sigset: object
++    sigset: sigset_t
+     /
+ 
+ Wait synchronously until one of the signals in *sigset* is delivered.
+@@ -1055,20 +993,16 @@ Returns a struct_siginfo containing information about the signal.
+ [clinic start generated code]*/
+ 
+ static PyObject *
+-signal_sigwaitinfo(PyObject *module, PyObject *sigset)
+-/*[clinic end generated code: output=c40f27b269cd2309 input=f3779a74a991e171]*/
++signal_sigwaitinfo_impl(PyObject *module, sigset_t sigset)
++/*[clinic end generated code: output=1eb2f1fa236fdbca input=3d1a7e1f27fc664c]*/
+ {
+-    sigset_t set;
+     siginfo_t si;
+     int err;
+     int async_err = 0;
+ 
+-    if (iterable_to_sigset(sigset, &set))
+-        return NULL;
+-
+     do {
+         Py_BEGIN_ALLOW_THREADS
+-        err = sigwaitinfo(&set, &si);
++        err = sigwaitinfo(&sigset, &si);
+         Py_END_ALLOW_THREADS
+     } while (err == -1
+              && errno == EINTR && !(async_err = PyErr_CheckSignals()));
+@@ -1085,7 +1019,7 @@ signal_sigwaitinfo(PyObject *module, PyObject *sigset)
+ /*[clinic input]
+ signal.sigtimedwait
+ 
+-    sigset:  object
++    sigset: sigset_t
+     timeout as timeout_obj: object
+     /
+ 
+@@ -1095,12 +1029,11 @@ The timeout is specified in seconds, with floating point numbers allowed.
+ [clinic start generated code]*/
+ 
+ static PyObject *
+-signal_sigtimedwait_impl(PyObject *module, PyObject *sigset,
++signal_sigtimedwait_impl(PyObject *module, sigset_t sigset,
+                          PyObject *timeout_obj)
+-/*[clinic end generated code: output=f7eff31e679f4312 input=53fd4ea3e3724eb8]*/
++/*[clinic end generated code: output=59c8971e8ae18a64 input=87fd39237cf0b7ba]*/
+ {
+     struct timespec ts;
+-    sigset_t set;
+     siginfo_t si;
+     int res;
+     _PyTime_t timeout, deadline, monotonic;
+@@ -1114,9 +1047,6 @@ signal_sigtimedwait_impl(PyObject *module, PyObject *sigset,
+         return NULL;
+     }
+ 
+-    if (iterable_to_sigset(sigset, &set))
+-        return NULL;
+-
+     deadline = _PyTime_GetMonotonicClock() + timeout;
+ 
+     do {
+@@ -1124,7 +1054,7 @@ signal_sigtimedwait_impl(PyObject *module, PyObject *sigset,
+             return NULL;
+ 
+         Py_BEGIN_ALLOW_THREADS
+-        res = sigtimedwait(&set, &si, &ts);
++        res = sigtimedwait(&sigset, &si, &ts);
+         Py_END_ALLOW_THREADS
+ 
+         if (res != -1)
+-- 
+2.23.0
+
