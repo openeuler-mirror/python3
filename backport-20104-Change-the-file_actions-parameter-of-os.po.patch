@@ -1,0 +1,209 @@
+From 80c7ad17e8004096e508db5fc78d3b69b51e354e Mon Sep 17 00:00:00 2001
+From: Serhiy Storchaka <storchaka@gmail.com>
+Date: Sat, 8 Sep 2018 14:48:18 +0300
+Subject: [PATCH] bpo-20104: Change the file_actions parameter of
+ os.posix_spawn(). (GH-6725)
+
+* Make its default value an empty tuple instead of None.
+* Make it a keyword-only parameter.
+
+Conflict:NA
+Reference:https://github.com/python/cpython/commit/d700f97b627989d41cd4629dc02969f9a6b56d2f
+
+Signed-off-by: hanxinke <hanxinke@huawei.com>
+---
+ Lib/test/test_posix.py         | 57 +++++++++++++++++-----------------
+ Modules/clinic/posixmodule.c.h |  8 ++---
+ Modules/posixmodule.c          |  9 +++---
+ 3 files changed, 37 insertions(+), 37 deletions(-)
+
+diff --git a/Lib/test/test_posix.py b/Lib/test/test_posix.py
+index 77fedb1..ee3c5f0 100644
+--- a/Lib/test/test_posix.py
++++ b/Lib/test/test_posix.py
+@@ -1527,8 +1527,7 @@ class TestPosixSpawn(unittest.TestCase):
+                 pidfile.write(str(os.getpid()))
+             """
+         args = self.python_args('-c', script)
+-        pid = posix.posix_spawn(args[0], args,
+-                                os.environ)
++        pid = posix.posix_spawn(args[0], args, os.environ)
+         self.assertEqual(os.waitpid(pid, 0), (pid, 0))
+         with open(pidfile) as f:
+             self.assertEqual(f.read(), str(pid))
+@@ -1566,7 +1565,7 @@ class TestPosixSpawn(unittest.TestCase):
+             self.NOOP_PROGRAM[0],
+             self.NOOP_PROGRAM,
+             os.environ,
+-            []
++            file_actions=[]
+         )
+         self.assertEqual(os.waitpid(pid, 0), (pid, 0))
+ 
+@@ -1719,37 +1718,38 @@ class TestPosixSpawn(unittest.TestCase):
+         ]
+         pid = posix.posix_spawn(self.NOOP_PROGRAM[0],
+                                 self.NOOP_PROGRAM,
+-                                os.environ, file_actions)
++                                os.environ,
++                                file_actions=file_actions)
+         self.assertEqual(os.waitpid(pid, 0), (pid, 0))
+ 
+     def test_bad_file_actions(self):
+         args = self.NOOP_PROGRAM
+         with self.assertRaises(TypeError):
+-            posix.posix_spawn(args[0], args,
+-                              os.environ, [None])
++            posix.posix_spawn(args[0], args, os.environ,
++                              file_actions=[None])
+         with self.assertRaises(TypeError):
+-            posix.posix_spawn(args[0], args,
+-                              os.environ, [()])
++            posix.posix_spawn(args[0], args, os.environ,
++                              file_actions=[()])
+         with self.assertRaises(TypeError):
+-            posix.posix_spawn(args[0], args,
+-                              os.environ, [(None,)])
++            posix.posix_spawn(args[0], args, os.environ,
++                              file_actions=[(None,)])
+         with self.assertRaises(TypeError):
+-            posix.posix_spawn(args[0], args,
+-                              os.environ, [(12345,)])
++            posix.posix_spawn(args[0], args, os.environ,
++                              file_actions=[(12345,)])
+         with self.assertRaises(TypeError):
+-            posix.posix_spawn(args[0], args,
+-                              os.environ, [(os.POSIX_SPAWN_CLOSE,)])
++            posix.posix_spawn(args[0], args, os.environ,
++                              file_actions=[(os.POSIX_SPAWN_CLOSE,)])
+         with self.assertRaises(TypeError):
+-            posix.posix_spawn(args[0], args,
+-                              os.environ, [(os.POSIX_SPAWN_CLOSE, 1, 2)])
++            posix.posix_spawn(args[0], args, os.environ,
++                              file_actions=[(os.POSIX_SPAWN_CLOSE, 1, 2)])
+         with self.assertRaises(TypeError):
+-            posix.posix_spawn(args[0], args,
+-                              os.environ, [(os.POSIX_SPAWN_CLOSE, None)])
++            posix.posix_spawn(args[0], args, os.environ,
++                              file_actions=[(os.POSIX_SPAWN_CLOSE, None)])
+         with self.assertRaises(ValueError):
+-            posix.posix_spawn(args[0], args,
+-                              os.environ,
+-                              [(os.POSIX_SPAWN_OPEN, 3, __file__ + '\0',
+-                                os.O_RDONLY, 0)])
++            posix.posix_spawn(args[0], args, os.environ,
++                              file_actions=[(os.POSIX_SPAWN_OPEN,
++                                             3, __file__ + '\0',
++                                             os.O_RDONLY, 0)])
+ 
+     def test_open_file(self):
+         outfile = support.TESTFN
+@@ -1764,8 +1764,8 @@ class TestPosixSpawn(unittest.TestCase):
+                 stat.S_IRUSR | stat.S_IWUSR),
+         ]
+         args = self.python_args('-c', script)
+-        pid = posix.posix_spawn(args[0], args,
+-                                os.environ, file_actions)
++        pid = posix.posix_spawn(args[0], args, os.environ,
++                                file_actions=file_actions)
+         self.assertEqual(os.waitpid(pid, 0), (pid, 0))
+         with open(outfile) as f:
+             self.assertEqual(f.read(), 'hello')
+@@ -1782,9 +1782,8 @@ class TestPosixSpawn(unittest.TestCase):
+                     closefile.write('is closed %d' % e.errno)
+             """
+         args = self.python_args('-c', script)
+-        pid = posix.posix_spawn(args[0], args,
+-                                os.environ,
+-                                [(os.POSIX_SPAWN_CLOSE, 0),])
++        pid = posix.posix_spawn(args[0], args, os.environ,
++                                file_actions=[(os.POSIX_SPAWN_CLOSE, 0),])
+         self.assertEqual(os.waitpid(pid, 0), (pid, 0))
+         with open(closefile) as f:
+             self.assertEqual(f.read(), 'is closed %d' % errno.EBADF)
+@@ -1801,8 +1800,8 @@ class TestPosixSpawn(unittest.TestCase):
+                 (os.POSIX_SPAWN_DUP2, childfile.fileno(), 1),
+             ]
+             args = self.python_args('-c', script)
+-            pid = posix.posix_spawn(args[0], args,
+-                                    os.environ, file_actions)
++            pid = posix.posix_spawn(args[0], args, os.environ,
++                                    file_actions=file_actions)
+             self.assertEqual(os.waitpid(pid, 0), (pid, 0))
+         with open(dupfile) as f:
+             self.assertEqual(f.read(), 'hello')
+diff --git a/Modules/clinic/posixmodule.c.h b/Modules/clinic/posixmodule.c.h
+index a3b5a8b..133abd7 100644
+--- a/Modules/clinic/posixmodule.c.h
++++ b/Modules/clinic/posixmodule.c.h
+@@ -1730,7 +1730,7 @@ exit:
+ #if defined(HAVE_POSIX_SPAWN)
+ 
+ PyDoc_STRVAR(os_posix_spawn__doc__,
+-"posix_spawn($module, path, argv, env, file_actions=None, /, *,\n"
++"posix_spawn($module, path, argv, env, /, *, file_actions=(),\n"
+ "            setpgroup=None, resetids=False, setsigmask=(),\n"
+ "            setsigdef=(), scheduler=None)\n"
+ "--\n"
+@@ -1769,12 +1769,12 @@ static PyObject *
+ os_posix_spawn(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
+ {
+     PyObject *return_value = NULL;
+-    static const char * const _keywords[] = {"", "", "", "", "setpgroup", "resetids", "setsigmask", "setsigdef", "scheduler", NULL};
+-    static _PyArg_Parser _parser = {"O&OO|O$OiOOO:posix_spawn", _keywords, 0};
++    static const char * const _keywords[] = {"", "", "", "file_actions", "setpgroup", "resetids", "setsigmask", "setsigdef", "scheduler", NULL};
++    static _PyArg_Parser _parser = {"O&OO|$OOiOOO:posix_spawn", _keywords, 0};
+     path_t path = PATH_T_INITIALIZE("posix_spawn", "path", 0, 0);
+     PyObject *argv;
+     PyObject *env;
+-    PyObject *file_actions = Py_None;
++    PyObject *file_actions = NULL;
+     PyObject *setpgroup = NULL;
+     int resetids = 0;
+     PyObject *setsigmask = NULL;
+diff --git a/Modules/posixmodule.c b/Modules/posixmodule.c
+index a1808f6..dc6a22f 100644
+--- a/Modules/posixmodule.c
++++ b/Modules/posixmodule.c
+@@ -5366,10 +5366,10 @@ os.posix_spawn
+         Tuple or list of strings.
+     env: object
+         Dictionary of strings mapping to strings.
+-    file_actions: object = None
+-        A sequence of file action tuples.
+     /
+     *
++    file_actions: object(c_default='NULL') = ()
++        A sequence of file action tuples.
+     setpgroup: object = NULL
+         The pgroup to use with the POSIX_SPAWN_SETPGROUP flag.
+     resetids: bool(accept={int}) = False
+@@ -5380,6 +5380,7 @@ os.posix_spawn
+         The sigmask to use with the POSIX_SPAWN_SETSIGDEF flag.
+     scheduler: object = NULL
+         A tuple with the scheduler policy (optional) and parameters.
++
+ Execute the program specified by path in a new process.
+ [clinic start generated code]*/
+ 
+@@ -5388,7 +5389,7 @@ os_posix_spawn_impl(PyObject *module, path_t *path, PyObject *argv,
+                     PyObject *env, PyObject *file_actions,
+                     PyObject *setpgroup, int resetids, PyObject *setsigmask,
+                     PyObject *setsigdef, PyObject *scheduler)
+-/*[clinic end generated code: output=45dfa4c515d09f2c input=2d7a7578430a90f0]*/
++/*[clinic end generated code: output=45dfa4c515d09f2c input=2891c2f1d457e39b]*/
+ {
+     EXECV_CHAR **argvlist = NULL;
+     EXECV_CHAR **envlist = NULL;
+@@ -5438,7 +5439,7 @@ os_posix_spawn_impl(PyObject *module, path_t *path, PyObject *argv,
+         goto exit;
+     }
+ 
+-    if (file_actions != Py_None) {
++    if (file_actions != NULL) {
+         /* There is a bug in old versions of glibc that makes some of the
+          * helper functions for manipulating file actions not copy the provided
+          * buffers. The problem is that posix_spawn_file_actions_addopen does not
+-- 
+2.23.0
+

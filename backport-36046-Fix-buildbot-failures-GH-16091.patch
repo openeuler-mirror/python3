@@ -1,0 +1,71 @@
+From f0deaf10e67b96413be55e18c768b897de02dea2 Mon Sep 17 00:00:00 2001
+From: "Gregory P. Smith" <greg@krypto.org>
+Date: Fri, 13 Sep 2019 14:43:35 +0100
+Subject: [PATCH] bpo-36046: Fix buildbot failures (GH-16091)
+
+Varying user/group/permission check needs on platforms.
+
+Conflict:NA
+Reference:https://github.com/python/cpython/commit/693aa80a434590ea7dcd35c000209e53d01b9425
+
+Signed-off-by: hanxinke <hanxinke@huawei.com>
+---
+ Lib/test/test_subprocess.py | 20 +++++++++++++++++---
+ 1 file changed, 17 insertions(+), 3 deletions(-)
+
+diff --git a/Lib/test/test_subprocess.py b/Lib/test/test_subprocess.py
+index 6c2fd61..aa2f539 100644
+--- a/Lib/test/test_subprocess.py
++++ b/Lib/test/test_subprocess.py
+@@ -1539,6 +1539,18 @@ class RunFuncTestCase(BaseTestCase):
+                         f"{stacks}```")
+ 
+ 
++def _get_test_grp_name():
++    for name_group in ('staff', 'nogroup', 'grp'):
++        if grp:
++            try:
++                grp.getgrnam(name_group)
++            except KeyError:
++                continue
++            return name_group
++    else:
++        raise unittest.SkipTest('No identified group name to use for this test on this platform.')
++
++
+ @unittest.skipIf(mswindows, "POSIX specific tests")
+ class POSIXProcessTestCase(BaseTestCase):
+ 
+@@ -1711,8 +1723,10 @@ class POSIXProcessTestCase(BaseTestCase):
+                             [sys.executable, "-c",
+                              "import os; print(os.getuid())"],
+                             user=user)
++                except PermissionError:  # errno.EACCES
++                    pass
+                 except OSError as e:
+-                    if e.errno != errno.EPERM:
++                    if e.errno not in (errno.EACCES, errno.EPERM):
+                         raise
+                 else:
+                     if isinstance(user, str):
+@@ -1738,7 +1752,7 @@ class POSIXProcessTestCase(BaseTestCase):
+     def test_group(self):
+         gid = os.getegid()
+         group_list = [65534 if gid != 65534 else 65533]
+-        name_group = "nogroup" if sys.platform != 'darwin' else "staff"
++        name_group = _get_test_grp_name()
+ 
+         if grp is not None:
+             group_list.append(name_group)
+@@ -1779,7 +1793,7 @@ class POSIXProcessTestCase(BaseTestCase):
+     def test_extra_groups(self):
+         gid = os.getegid()
+         group_list = [65534 if gid != 65534 else 65533]
+-        name_group = "nogroup" if sys.platform != 'darwin' else "staff"
++        name_group = _get_test_grp_name()
+         perm_error = False
+ 
+         if grp is not None:
+-- 
+2.23.0
+

@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.9
-Release: 13
+Release: 14
 License: Python
 
 %global branchversion 3.7
@@ -110,6 +110,39 @@ Patch6000: backport-37788-Fix-reference-leak-when-Thread-is-never-joined.patch
 Patch6001: backport-CVE-2021-3426.patch
 Patch6002: backport-Remove-thread-objects-which-finished-process-its-request.patch
 
+Patch6003:  backport-20104-Expose-posix_spawn-in-the-os-module-GH-510.patch
+Patch6004:  backport-20104-Fix-leaks-and-errors-in-new-os.posix_spawn.patch
+Patch6005:  backport-20104-Improve-error-handling-and-fix-a-reference.patch
+Patch6006:  backport-33630-Fix-using-of-freed-memory-in-old-versions-.patch
+Patch6007:  backport-33332-Add-signal.valid_signals-GH-6581.patch
+Patch6008:  backport-33441-Make-the-sigset_t-converter-available-in-o.patch
+Patch6009:  backport-20104-Add-flag-capabilities-to-posix_spawn-GH-66.patch
+Patch6010:  backport-33455-Pass-os.environ-in-test_posix-test_specify.patch
+Patch6011:  backport-Fix-TestPosixSpawn.test_close_file-GH-8992.patch
+Patch6012:  backport-20104-Change-the-file_actions-parameter-of-os.po.patch
+Patch6013:  backport-35537-subprocess-uses-os.posix_spawn-in-some-cas.patch
+Patch6014:  backport-35674-Add-os.posix_spawnp-GH-11554.patch
+Patch6015:  backport-35537-subprocess-can-use-posix_spawn-with-pipes-.patch
+Patch6016:  backport-subprocess-close-pipes-fds-by-using-ExitStack-GH-116.patch
+Patch6017:  backport-34862-Guard-definition-of-convert_sched_p.patch
+Patch6018:  backport-35537-Add-setsid-parameter-to-os.posix_spawn-and.patch
+Patch6019:  backport-35537-Skip-test_start_new_session-of-posix_spawn.patch
+Patch6020:  backport-35537-Fix-function-name-in-os.posix_spawnp-error.patch
+Patch6021:  backport-36814-ensure-os.posix_spawn-handles-None-GH-1314.patch
+Patch6022:  backport-35537-Rewrite-setsid-test-for-os.posix_spawn-GH-.patch
+Patch6023:  backport-36046-Add-user-and-group-parameters-to-subproces.patch
+Patch6024:  backport-36046-Fix-buildbot-failures-GH-16091.patch
+Patch6025:  backport-36046-posix_spawn-doesn-t-support-uid-gid-GH-163.patch
+Patch6026:  backport-38417-Add-umask-support-to-subprocess-GH-16726.patch
+Patch6027:  backport-38456-Use-bin-true-in-test_subprocess-GH-16736.patch
+Patch6028:  backport-38456-Handle-the-case-when-there-is-no-true-comm.patch
+Patch6029:  backport-39855-Fix-test_subprocess-if-nobody-user-doesn-t.patch
+Patch6030:  backport-35823-subprocess-Use-vfork-instead-of-fork-on-Li.patch
+Patch6031:  backport-35823-subprocess-Fix-handling-of-pthread_sigmask.patch
+Patch6032:  backport-35823-Allow-setsid-after-vfork-on-Linux.-GH-2294.patch
+Patch6033:  backport-42146-Fix-memory-leak-in-subprocess.Popen-in-cas.patch
+Patch6034:  backport-42146-Unify-cleanup-in-subprocess_fork_exec-GH-2.patch
+
 Recommends: %{name}-help = %{version}-%{release}
 Provides: python%{branchversion} = %{version}-%{release}
 Provides: python(abi) = %{branchversion}
@@ -205,6 +238,39 @@ rm Lib/ensurepip/_bundled/*.whl
 %patch6000 -p1
 %patch6001 -p1
 %patch6002 -p1
+
+%patch6003 -p1
+%patch6004 -p1
+%patch6005 -p1
+%patch6006 -p1
+%patch6007 -p1
+%patch6008 -p1
+%patch6009 -p1
+%patch6010 -p1
+%patch6011 -p1
+%patch6012 -p1
+%patch6013 -p1
+%patch6014 -p1
+%patch6015 -p1
+%patch6016 -p1
+%patch6017 -p1
+%patch6018 -p1
+%patch6019 -p1
+%patch6020 -p1
+%patch6021 -p1
+%patch6022 -p1
+%patch6023 -p1
+%patch6024 -p1
+%patch6025 -p1
+%patch6026 -p1
+%patch6027 -p1
+%patch6028 -p1
+%patch6029 -p1
+%patch6030 -p1 
+%patch6031 -p1
+%patch6032 -p1
+%patch6033 -p1 
+%patch6034 -p1
 
 sed -i "s/generic_os/%{_vendor}/g" Lib/platform.py
 rm configure pyconfig.h.in
@@ -806,6 +872,43 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Web Jun 23 2021 hanxinke<hanxinke@huawei.com> - 3.7.9-14
+- Type:enhancement
+- CVE:NA
+- SUG:NA
+- DESC:expose posix_spawn in os module
+       fix leaks and errors in new os.posix_spawn
+       improve error handing and fix a reference
+       fix using of freed memory in old versions
+       add signal.valid_signals
+       make the sigset_t converter available
+       add flag capabilities to posix_spawn
+       pass os.environ in test_posix test_specify
+       fix TestPosixSpawn.test_close_file
+       change the file_actions parameter of os.posix_spawn
+       subprocess uses os.posix_spawn in some case
+       add os.posix_spawnp
+       subprocess can use posix_spawn with pipes
+       subprocess close pipes fds by using ExitStack
+       guard definition of convert_sched_param with POSIX_SPAWN_SETSCHEDULER
+       add setsid parameter to os.posix_spawn() and os.posix_spawnp()
+       skip test_start_new_session() of posix_spawn
+       fix function name in os.posix_spawnp() errors
+       ensure os.posix_spawn() handles None
+       rewrite setsid test for os.posix_spawn
+       add user and group parameters to subproces
+       fix buildbot failures
+       posix_spawn doesn't support uid gid
+       add umask support to subprocess
+       use bin true in test_subprocess
+       handle the case when there is no 'true' command
+       fix test_subprocess if nobody user doesn't exist
+       subprocess: Use vfork() instead of fork() on Linux when safe
+       subprocess: Fix handling of pthread_sigmask() errors
+       allow setsid() after vfork() on Linux
+       fix memory leak in subprocess.Popen() in case of uid/gid overflow
+       Unify cleanup in subprocess_fork_exec()
+
 * Mon Jun 07 2021 BruceGW<gyl93216@163.com> - 3.7.9-13
 - Type:bugfix
 - ID:NA
