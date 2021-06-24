@@ -1,0 +1,101 @@
+From 7940f5c6e508ccb5a4d647094bf40f7a2f57b097 Mon Sep 17 00:00:00 2001
+From: Victor Stinner <vstinner@redhat.com>
+Date: Fri, 14 Jun 2019 19:31:43 +0200
+Subject: [PATCH] bpo-35537: Rewrite setsid test for os.posix_spawn (GH-11721)
+
+bpo-35537, bpo-35876: Fix also test_start_new_session() of
+test_subprocess: use os.getsid() rather than os.getpgid().
+
+Conflict:NA
+Reference:https://github.com/python/cpython/commit/5884043252473ac733aba1d3251d4debe72511e5
+
+Signed-off-by: hanxinke <hanxinke@huawei.com>
+---
+ Lib/test/test_posix.py      | 44 +++++++++++++++++++++++--------------
+ Lib/test/test_subprocess.py |  9 ++++----
+ 2 files changed, 32 insertions(+), 21 deletions(-)
+
+diff --git a/Lib/test/test_posix.py b/Lib/test/test_posix.py
+index 83accd4..e816946 100644
+--- a/Lib/test/test_posix.py
++++ b/Lib/test/test_posix.py
+@@ -1638,23 +1638,35 @@ class _PosixSpawnMixin:
+                             os.environ, setsigmask=[signal.NSIG,
+                                                     signal.NSIG+1])
+ 
+-    @unittest.skipIf(True,
+-                     "FIXME: bpo-35537: test fails is setsid is supported")
+-    def test_start_new_session(self):
+-        # For code coverage of calling setsid().  We don't care if we get an
+-        # EPERM error from it depending on the test execution environment, that
+-        # still indicates that it was called.
+-        code = "import os; print(os.getpgid(os.getpid()))"
++    def test_setsid(self):
++        rfd, wfd = os.pipe()
++        self.addCleanup(os.close, rfd)
+         try:
+-            self.spawn_func(sys.executable,
+-                            [sys.executable, "-c", code],
+-                            os.environ, setsid=True)
+-        except NotImplementedError as exc:
+-            self.skipTest("setsid is not supported: %s" % exc)
+-        else:
+-            parent_pgid = os.getpgid(os.getpid())
+-            child_pgid = int(output)
+-            self.assertNotEqual(parent_pgid, child_pgid)
++            os.set_inheritable(wfd, True)
++
++            code = textwrap.dedent(f"""
++                import os
++                fd = {wfd}
++                sid = os.getsid(0)
++                os.write(fd, str(sid).encode())
++            """)
++
++            try:
++                pid = self.spawn_func(sys.executable,
++                                      [sys.executable, "-c", code],
++                                      os.environ, setsid=True)
++            except NotImplementedError as exc:
++                self.skipTest(f"setsid is not supported: {exc!r}")
++            except PermissionError as exc:
++                self.skipTest(f"setsid failed with: {exc!r}")
++        finally:
++            os.close(wfd)
++
++        self.assertEqual(os.waitpid(pid, 0), (pid, 0))
++        output = os.read(rfd, 100)
++        child_sid = int(output)
++        parent_sid = os.getsid(os.getpid())
++        self.assertNotEqual(parent_sid, child_sid)
+ 
+     @unittest.skipUnless(hasattr(signal, 'pthread_sigmask'),
+                          'need signal.pthread_sigmask()')
+diff --git a/Lib/test/test_subprocess.py b/Lib/test/test_subprocess.py
+index 89dcb8f..eebd348 100644
+--- a/Lib/test/test_subprocess.py
++++ b/Lib/test/test_subprocess.py
+@@ -1671,16 +1671,15 @@ class POSIXProcessTestCase(BaseTestCase):
+         # still indicates that it was called.
+         try:
+             output = subprocess.check_output(
+-                    [sys.executable, "-c",
+-                     "import os; print(os.getpgid(os.getpid()))"],
++                    [sys.executable, "-c", "import os; print(os.getsid(0))"],
+                     start_new_session=True)
+         except OSError as e:
+             if e.errno != errno.EPERM:
+                 raise
+         else:
+-            parent_pgid = os.getpgid(os.getpid())
+-            child_pgid = int(output)
+-            self.assertNotEqual(parent_pgid, child_pgid)
++            parent_sid = os.getsid(0)
++            child_sid = int(output)
++            self.assertNotEqual(parent_sid, child_sid)
+ 
+     def test_run_abort(self):
+         # returncode handles signal termination
+-- 
+2.23.0
+

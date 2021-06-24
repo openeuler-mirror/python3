@@ -1,0 +1,32 @@
+From 41c5fb1900f673029d1b6ecf24c743ac1ce4114f Mon Sep 17 00:00:00 2001
+From: Victor Stinner <vstinner@redhat.com>
+Date: Fri, 1 Feb 2019 11:40:26 +0100
+Subject: [PATCH] bpo-35537: Skip test_start_new_session() of posix_spawn
+ (GH-11718)
+
+The test fails. Skip the test until a fix can be found.
+
+Conflict:NA
+Reference:https://github.com/python/cpython/commit/1e39b83f24ffade3e0ca1a8004b461354f64ae08
+
+Signed-off-by: hanxinke <hanxinke@huawei.com>
+---
+ Lib/test/test_posix.py | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/Lib/test/test_posix.py b/Lib/test/test_posix.py
+index ccc16b5..83accd4 100644
+--- a/Lib/test/test_posix.py
++++ b/Lib/test/test_posix.py
+@@ -1638,6 +1638,8 @@ class _PosixSpawnMixin:
+                             os.environ, setsigmask=[signal.NSIG,
+                                                     signal.NSIG+1])
+ 
++    @unittest.skipIf(True,
++                     "FIXME: bpo-35537: test fails is setsid is supported")
+     def test_start_new_session(self):
+         # For code coverage of calling setsid().  We don't care if we get an
+         # EPERM error from it depending on the test execution environment, that
+-- 
+2.23.0
+
