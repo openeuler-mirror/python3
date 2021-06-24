@@ -1,0 +1,686 @@
+From cfe32a7f819ed8d802141fcad2842bbbf356670b Mon Sep 17 00:00:00 2001
+From: Joannah Nanjekye <33177550+nanjekyejoannah@users.noreply.github.com>
+Date: Wed, 16 Jan 2019 16:29:26 +0300
+Subject: [PATCH] bpo-35674: Add os.posix_spawnp() (GH-11554)
+
+Add a new os.posix_spawnp() function.
+
+Conflict:NA
+Reference:https://github.com/python/cpython/commit/92b8322e7ea04b239cb1cb87b78d952f13ddfebb
+
+Signed-off-by: hanxinke <hanxinke@huawei.com>
+---
+ Lib/test/test_posix.py                        | 190 +++++++++++-------
+ .../2019-01-14-14-13-08.bpo-35674.kamWqz.rst  |   2 +
+ Modules/clinic/posixmodule.c.h                |  73 +++++++
+ Modules/posixmodule.c                         | 135 +++++++++----
+ configure                                     |   2 +-
+ configure.ac                                  |   2 +-
+ pyconfig.h.in                                 |   3 +
+ 7 files changed, 300 insertions(+), 107 deletions(-)
+ create mode 100644 Misc/NEWS.d/next/Library/2019-01-14-14-13-08.bpo-35674.kamWqz.rst
+
+diff --git a/Lib/test/test_posix.py b/Lib/test/test_posix.py
+index ee3c5f0..ec72f9e 100644
+--- a/Lib/test/test_posix.py
++++ b/Lib/test/test_posix.py
+@@ -1505,10 +1505,10 @@ class PosixGroupsTester(unittest.TestCase):
+             self.assertListEqual(groups, posix.getgroups())
+ 
+ 
+-@unittest.skipUnless(hasattr(os, 'posix_spawn'), "test needs os.posix_spawn")
+-class TestPosixSpawn(unittest.TestCase):
+-    # Program which does nothing and exit with status 0 (success)
++class _PosixSpawnMixin:
++    # Program which does nothing and exits with status 0 (success)
+     NOOP_PROGRAM = (sys.executable, '-I', '-S', '-c', 'pass')
++    spawn_func = None
+ 
+     def python_args(self, *args):
+         # Disable site module to avoid side effects. For example,
+@@ -1527,7 +1527,7 @@ class TestPosixSpawn(unittest.TestCase):
+                 pidfile.write(str(os.getpid()))
+             """
+         args = self.python_args('-c', script)
+-        pid = posix.posix_spawn(args[0], args, os.environ)
++        pid = self.spawn_func(args[0], args, os.environ)
+         self.assertEqual(os.waitpid(pid, 0), (pid, 0))
+         with open(pidfile) as f:
+             self.assertEqual(f.read(), str(pid))
+@@ -1535,9 +1535,9 @@ class TestPosixSpawn(unittest.TestCase):
+     def test_no_such_executable(self):
+         no_such_executable = 'no_such_executable'
+         try:
+-            pid = posix.posix_spawn(no_such_executable,
+-                                    [no_such_executable],
+-                                    os.environ)
++            pid = self.spawn_func(no_such_executable,
++                                  [no_such_executable],
++                                  os.environ)
+         except FileNotFoundError as exc:
+             self.assertEqual(exc.filename, no_such_executable)
+         else:
+@@ -1554,14 +1554,14 @@ class TestPosixSpawn(unittest.TestCase):
+                 envfile.write(os.environ['foo'])
+         """
+         args = self.python_args('-c', script)
+-        pid = posix.posix_spawn(args[0], args,
+-                                {**os.environ, 'foo': 'bar'})
++        pid = self.spawn_func(args[0], args,
++                              {**os.environ, 'foo': 'bar'})
+         self.assertEqual(os.waitpid(pid, 0), (pid, 0))
+         with open(envfile) as f:
+             self.assertEqual(f.read(), 'bar')
+ 
+     def test_empty_file_actions(self):
+-        pid = posix.posix_spawn(
++        pid = self.spawn_func(
+             self.NOOP_PROGRAM[0],
+             self.NOOP_PROGRAM,
+             os.environ,
+@@ -1570,7 +1570,7 @@ class TestPosixSpawn(unittest.TestCase):
+         self.assertEqual(os.waitpid(pid, 0), (pid, 0))
+ 
+     def test_resetids_explicit_default(self):
+-        pid = posix.posix_spawn(
++        pid = self.spawn_func(
+             sys.executable,
+             [sys.executable, '-c', 'pass'],
+             os.environ,
+@@ -1579,7 +1579,7 @@ class TestPosixSpawn(unittest.TestCase):
+         self.assertEqual(os.waitpid(pid, 0), (pid, 0))
+ 
+     def test_resetids(self):
+-        pid = posix.posix_spawn(
++        pid = self.spawn_func(
+             sys.executable,
+             [sys.executable, '-c', 'pass'],
+             os.environ,
+@@ -1589,12 +1589,12 @@ class TestPosixSpawn(unittest.TestCase):
+ 
+     def test_resetids_wrong_type(self):
+         with self.assertRaises(TypeError):
+-            posix.posix_spawn(sys.executable,
+-                              [sys.executable, "-c", "pass"],
+-                              os.environ, resetids=None)
++            self.spawn_func(sys.executable,
++                            [sys.executable, "-c", "pass"],
++                            os.environ, resetids=None)
+ 
+     def test_setpgroup(self):
+-        pid = posix.posix_spawn(
++        pid = self.spawn_func(
+             sys.executable,
+             [sys.executable, '-c', 'pass'],
+             os.environ,
+@@ -1604,9 +1604,9 @@ class TestPosixSpawn(unittest.TestCase):
+ 
+     def test_setpgroup_wrong_type(self):
+         with self.assertRaises(TypeError):
+-            posix.posix_spawn(sys.executable,
+-                              [sys.executable, "-c", "pass"],
+-                              os.environ, setpgroup="023")
++            self.spawn_func(sys.executable,
++                            [sys.executable, "-c", "pass"],
++                            os.environ, setpgroup="023")
+ 
+     @unittest.skipUnless(hasattr(signal, 'pthread_sigmask'),
+                            'need signal.pthread_sigmask()')
+@@ -1615,7 +1615,7 @@ class TestPosixSpawn(unittest.TestCase):
+             import _testcapi, signal
+             _testcapi.raise_signal(signal.SIGUSR1)""")
+ 
+-        pid = posix.posix_spawn(
++        pid = self.spawn_func(
+             sys.executable,
+             [sys.executable, '-c', code],
+             os.environ,
+@@ -1625,18 +1625,18 @@ class TestPosixSpawn(unittest.TestCase):
+ 
+     def test_setsigmask_wrong_type(self):
+         with self.assertRaises(TypeError):
+-            posix.posix_spawn(sys.executable,
+-                              [sys.executable, "-c", "pass"],
+-                              os.environ, setsigmask=34)
++            self.spawn_func(sys.executable,
++                            [sys.executable, "-c", "pass"],
++                            os.environ, setsigmask=34)
+         with self.assertRaises(TypeError):
+-            posix.posix_spawn(sys.executable,
+-                              [sys.executable, "-c", "pass"],
+-                              os.environ, setsigmask=["j"])
++            self.spawn_func(sys.executable,
++                            [sys.executable, "-c", "pass"],
++                            os.environ, setsigmask=["j"])
+         with self.assertRaises(ValueError):
+-            posix.posix_spawn(sys.executable,
+-                              [sys.executable, "-c", "pass"],
+-                              os.environ, setsigmask=[signal.NSIG,
+-                                                      signal.NSIG+1])
++            self.spawn_func(sys.executable,
++                            [sys.executable, "-c", "pass"],
++                            os.environ, setsigmask=[signal.NSIG,
++                                                    signal.NSIG+1])
+ 
+     @unittest.skipUnless(hasattr(signal, 'pthread_sigmask'),
+                          'need signal.pthread_sigmask()')
+@@ -1646,7 +1646,7 @@ class TestPosixSpawn(unittest.TestCase):
+             import _testcapi, signal
+             _testcapi.raise_signal(signal.SIGUSR1)""")
+         try:
+-            pid = posix.posix_spawn(
++            pid = self.spawn_func(
+                 sys.executable,
+                 [sys.executable, '-c', code],
+                 os.environ,
+@@ -1662,17 +1662,17 @@ class TestPosixSpawn(unittest.TestCase):
+ 
+     def test_setsigdef_wrong_type(self):
+         with self.assertRaises(TypeError):
+-            posix.posix_spawn(sys.executable,
+-                              [sys.executable, "-c", "pass"],
+-                              os.environ, setsigdef=34)
++            self.spawn_func(sys.executable,
++                            [sys.executable, "-c", "pass"],
++                            os.environ, setsigdef=34)
+         with self.assertRaises(TypeError):
+-            posix.posix_spawn(sys.executable,
+-                              [sys.executable, "-c", "pass"],
+-                              os.environ, setsigdef=["j"])
++            self.spawn_func(sys.executable,
++                            [sys.executable, "-c", "pass"],
++                            os.environ, setsigdef=["j"])
+         with self.assertRaises(ValueError):
+-            posix.posix_spawn(sys.executable,
+-                              [sys.executable, "-c", "pass"],
+-                              os.environ, setsigdef=[signal.NSIG, signal.NSIG+1])
++            self.spawn_func(sys.executable,
++                            [sys.executable, "-c", "pass"],
++                            os.environ, setsigdef=[signal.NSIG, signal.NSIG+1])
+ 
+     @unittest.skipUnless(hasattr(posix, 'sched_setscheduler'), "can't change scheduler")
+     def test_setscheduler_only_param(self):
+@@ -1684,7 +1684,7 @@ class TestPosixSpawn(unittest.TestCase):
+                 os.exit(101)
+             if os.sched_getparam(0).sched_priority != {priority}:
+                 os.exit(102)""")
+-        pid = posix.posix_spawn(
++        pid = self.spawn_func(
+             sys.executable,
+             [sys.executable, '-c', code],
+             os.environ,
+@@ -1702,7 +1702,7 @@ class TestPosixSpawn(unittest.TestCase):
+                 os.exit(101)
+             if os.sched_getparam(0).sched_priority != {priority}:
+                 os.exit(102)""")
+-        pid = posix.posix_spawn(
++        pid = self.spawn_func(
+             sys.executable,
+             [sys.executable, '-c', code],
+             os.environ,
+@@ -1716,40 +1716,40 @@ class TestPosixSpawn(unittest.TestCase):
+             (os.POSIX_SPAWN_CLOSE, 0),
+             (os.POSIX_SPAWN_DUP2, 1, 4),
+         ]
+-        pid = posix.posix_spawn(self.NOOP_PROGRAM[0],
+-                                self.NOOP_PROGRAM,
+-                                os.environ,
+-                                file_actions=file_actions)
++        pid = self.spawn_func(self.NOOP_PROGRAM[0],
++                              self.NOOP_PROGRAM,
++                              os.environ,
++                              file_actions=file_actions)
+         self.assertEqual(os.waitpid(pid, 0), (pid, 0))
+ 
+     def test_bad_file_actions(self):
+         args = self.NOOP_PROGRAM
+         with self.assertRaises(TypeError):
+-            posix.posix_spawn(args[0], args, os.environ,
+-                              file_actions=[None])
++            self.spawn_func(args[0], args, os.environ,
++                            file_actions=[None])
+         with self.assertRaises(TypeError):
+-            posix.posix_spawn(args[0], args, os.environ,
+-                              file_actions=[()])
++            self.spawn_func(args[0], args, os.environ,
++                            file_actions=[()])
+         with self.assertRaises(TypeError):
+-            posix.posix_spawn(args[0], args, os.environ,
+-                              file_actions=[(None,)])
++            self.spawn_func(args[0], args, os.environ,
++                            file_actions=[(None,)])
+         with self.assertRaises(TypeError):
+-            posix.posix_spawn(args[0], args, os.environ,
+-                              file_actions=[(12345,)])
++            self.spawn_func(args[0], args, os.environ,
++                            file_actions=[(12345,)])
+         with self.assertRaises(TypeError):
+-            posix.posix_spawn(args[0], args, os.environ,
+-                              file_actions=[(os.POSIX_SPAWN_CLOSE,)])
++            self.spawn_func(args[0], args, os.environ,
++                            file_actions=[(os.POSIX_SPAWN_CLOSE,)])
+         with self.assertRaises(TypeError):
+-            posix.posix_spawn(args[0], args, os.environ,
+-                              file_actions=[(os.POSIX_SPAWN_CLOSE, 1, 2)])
++            self.spawn_func(args[0], args, os.environ,
++                            file_actions=[(os.POSIX_SPAWN_CLOSE, 1, 2)])
+         with self.assertRaises(TypeError):
+-            posix.posix_spawn(args[0], args, os.environ,
+-                              file_actions=[(os.POSIX_SPAWN_CLOSE, None)])
++            self.spawn_func(args[0], args, os.environ,
++                            file_actions=[(os.POSIX_SPAWN_CLOSE, None)])
+         with self.assertRaises(ValueError):
+-            posix.posix_spawn(args[0], args, os.environ,
+-                              file_actions=[(os.POSIX_SPAWN_OPEN,
+-                                             3, __file__ + '\0',
+-                                             os.O_RDONLY, 0)])
++            self.spawn_func(args[0], args, os.environ,
++                            file_actions=[(os.POSIX_SPAWN_OPEN,
++                                           3, __file__ + '\0',
++                                           os.O_RDONLY, 0)])
+ 
+     def test_open_file(self):
+         outfile = support.TESTFN
+@@ -1764,8 +1764,8 @@ class TestPosixSpawn(unittest.TestCase):
+                 stat.S_IRUSR | stat.S_IWUSR),
+         ]
+         args = self.python_args('-c', script)
+-        pid = posix.posix_spawn(args[0], args, os.environ,
+-                                file_actions=file_actions)
++        pid = self.spawn_func(args[0], args, os.environ,
++                              file_actions=file_actions)
+         self.assertEqual(os.waitpid(pid, 0), (pid, 0))
+         with open(outfile) as f:
+             self.assertEqual(f.read(), 'hello')
+@@ -1782,8 +1782,8 @@ class TestPosixSpawn(unittest.TestCase):
+                     closefile.write('is closed %d' % e.errno)
+             """
+         args = self.python_args('-c', script)
+-        pid = posix.posix_spawn(args[0], args, os.environ,
+-                                file_actions=[(os.POSIX_SPAWN_CLOSE, 0),])
++        pid = self.spawn_func(args[0], args, os.environ,
++                              file_actions=[(os.POSIX_SPAWN_CLOSE, 0)])
+         self.assertEqual(os.waitpid(pid, 0), (pid, 0))
+         with open(closefile) as f:
+             self.assertEqual(f.read(), 'is closed %d' % errno.EBADF)
+@@ -1800,16 +1800,64 @@ class TestPosixSpawn(unittest.TestCase):
+                 (os.POSIX_SPAWN_DUP2, childfile.fileno(), 1),
+             ]
+             args = self.python_args('-c', script)
+-            pid = posix.posix_spawn(args[0], args, os.environ,
+-                                    file_actions=file_actions)
++            pid = self.spawn_func(args[0], args, os.environ,
++                                  file_actions=file_actions)
+             self.assertEqual(os.waitpid(pid, 0), (pid, 0))
+         with open(dupfile) as f:
+             self.assertEqual(f.read(), 'hello')
+ 
+ 
++@unittest.skipUnless(hasattr(os, 'posix_spawn'), "test needs os.posix_spawn")
++class TestPosixSpawn(unittest.TestCase, _PosixSpawnMixin):
++    spawn_func = getattr(posix, 'posix_spawn', None)
++
++
++@unittest.skipUnless(hasattr(os, 'posix_spawnp'), "test needs os.posix_spawnp")
++class TestPosixSpawnP(unittest.TestCase, _PosixSpawnMixin):
++    spawn_func = getattr(posix, 'posix_spawnp', None)
++
++    @support.skip_unless_symlink
++    def test_posix_spawnp(self):
++        # Use a symlink to create a program in its own temporary directory
++        temp_dir = tempfile.mkdtemp()
++        self.addCleanup(support.rmtree, temp_dir)
++
++        program = 'posix_spawnp_test_program.exe'
++        program_fullpath = os.path.join(temp_dir, program)
++        os.symlink(sys.executable, program_fullpath)
++
++        try:
++            path = os.pathsep.join((temp_dir, os.environ['PATH']))
++        except KeyError:
++            path = temp_dir   # PATH is not set
++
++        spawn_args = (program, '-I', '-S', '-c', 'pass')
++        code = textwrap.dedent("""
++            import os
++            args = %a
++            pid = os.posix_spawnp(args[0], args, os.environ)
++            pid2, status = os.waitpid(pid, 0)
++            if pid2 != pid:
++                raise Exception(f"pid {pid2} != {pid}")
++            if status != 0:
++                raise Exception(f"status {status} != 0")
++        """ % (spawn_args,))
++
++        # Use a subprocess to test os.posix_spawnp() with a modified PATH
++        # environment variable: posix_spawnp() uses the current environment
++        # to locate the program, not its environment argument.
++        args = ('-c', code)
++        assert_python_ok(*args, PATH=path)
++
++
+ def test_main():
+     try:
+-        support.run_unittest(PosixTester, PosixGroupsTester, TestPosixSpawn)
++        support.run_unittest(
++            PosixTester,
++            PosixGroupsTester,
++            TestPosixSpawn,
++            TestPosixSpawnP,
++        )
+     finally:
+         support.reap_children()
+ 
+diff --git a/Misc/NEWS.d/next/Library/2019-01-14-14-13-08.bpo-35674.kamWqz.rst b/Misc/NEWS.d/next/Library/2019-01-14-14-13-08.bpo-35674.kamWqz.rst
+new file mode 100644
+index 0000000..02d170e
+--- /dev/null
++++ b/Misc/NEWS.d/next/Library/2019-01-14-14-13-08.bpo-35674.kamWqz.rst
+@@ -0,0 +1,2 @@
++Add a new :func:`os.posix_spawnp` function.
++Patch by Joannah Nanjekye.
+\ No newline at end of file
+diff --git a/Modules/clinic/posixmodule.c.h b/Modules/clinic/posixmodule.c.h
+index 133abd7..0448aa5 100644
+--- a/Modules/clinic/posixmodule.c.h
++++ b/Modules/clinic/posixmodule.c.h
+@@ -1796,6 +1796,75 @@ exit:
+ 
+ #endif /* defined(HAVE_POSIX_SPAWN) */
+ 
++#if defined(HAVE_POSIX_SPAWNP)
++
++PyDoc_STRVAR(os_posix_spawnp__doc__,
++"posix_spawnp($module, path, argv, env, /, *, file_actions=(),\n"
++"             setpgroup=None, resetids=False, setsigmask=(),\n"
++"             setsigdef=(), scheduler=None)\n"
++"--\n"
++"\n"
++"Execute the program specified by path in a new process.\n"
++"\n"
++"  path\n"
++"    Path of executable file.\n"
++"  argv\n"
++"    Tuple or list of strings.\n"
++"  env\n"
++"    Dictionary of strings mapping to strings.\n"
++"  file_actions\n"
++"    A sequence of file action tuples.\n"
++"  setpgroup\n"
++"    The pgroup to use with the POSIX_SPAWN_SETPGROUP flag.\n"
++"  resetids\n"
++"    If the value is `True` the POSIX_SPAWN_RESETIDS will be activated.\n"
++"  setsigmask\n"
++"    The sigmask to use with the POSIX_SPAWN_SETSIGMASK flag.\n"
++"  setsigdef\n"
++"    The sigmask to use with the POSIX_SPAWN_SETSIGDEF flag.\n"
++"  scheduler\n"
++"    A tuple with the scheduler policy (optional) and parameters.");
++
++#define OS_POSIX_SPAWNP_METHODDEF    \
++    {"posix_spawnp", (PyCFunction)(void(*)(void))os_posix_spawnp, METH_FASTCALL|METH_KEYWORDS, os_posix_spawnp__doc__},
++
++static PyObject *
++os_posix_spawnp_impl(PyObject *module, path_t *path, PyObject *argv,
++                     PyObject *env, PyObject *file_actions,
++                     PyObject *setpgroup, int resetids, PyObject *setsigmask,
++                     PyObject *setsigdef, PyObject *scheduler);
++
++static PyObject *
++os_posix_spawnp(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
++{
++    PyObject *return_value = NULL;
++    static const char * const _keywords[] = {"", "", "", "file_actions", "setpgroup", "resetids", "setsigmask", "setsigdef", "scheduler", NULL};
++    static _PyArg_Parser _parser = {"O&OO|$OOiOOO:posix_spawnp", _keywords, 0};
++    path_t path = PATH_T_INITIALIZE("posix_spawnp", "path", 0, 0);
++    PyObject *argv;
++    PyObject *env;
++    PyObject *file_actions = NULL;
++    PyObject *setpgroup = NULL;
++    int resetids = 0;
++    PyObject *setsigmask = NULL;
++    PyObject *setsigdef = NULL;
++    PyObject *scheduler = NULL;
++
++    if (!_PyArg_ParseStackAndKeywords(args, nargs, kwnames, &_parser,
++        path_converter, &path, &argv, &env, &file_actions, &setpgroup, &resetids, &setsigmask, &setsigdef, &scheduler)) {
++        goto exit;
++    }
++    return_value = os_posix_spawnp_impl(module, &path, argv, env, file_actions, setpgroup, resetids, setsigmask, setsigdef, scheduler);
++
++exit:
++    /* Cleanup for path */
++    path_cleanup(&path);
++
++    return return_value;
++}
++
++#endif /* defined(HAVE_POSIX_SPAWNP) */
++
+ #if (defined(HAVE_SPAWNV) || defined(HAVE_WSPAWNV))
+ 
+ PyDoc_STRVAR(os_spawnv__doc__,
+@@ -6220,6 +6289,10 @@ exit:
+     #define OS_POSIX_SPAWN_METHODDEF
+ #endif /* !defined(OS_POSIX_SPAWN_METHODDEF) */
+ 
++#ifndef OS_POSIX_SPAWNP_METHODDEF
++    #define OS_POSIX_SPAWNP_METHODDEF
++#endif /* !defined(OS_POSIX_SPAWNP_METHODDEF) */
++
+ #ifndef OS_SPAWNV_METHODDEF
+     #define OS_SPAWNV_METHODDEF
+ #endif /* !defined(OS_SPAWNV_METHODDEF) */
+diff --git a/Modules/posixmodule.c b/Modules/posixmodule.c
+index dc6a22f..8d0e312 100644
+--- a/Modules/posixmodule.c
++++ b/Modules/posixmodule.c
+@@ -5357,39 +5357,12 @@ fail:
+     return -1;
+ }
+ 
+-/*[clinic input]
+-
+-os.posix_spawn
+-    path: path_t
+-        Path of executable file.
+-    argv: object
+-        Tuple or list of strings.
+-    env: object
+-        Dictionary of strings mapping to strings.
+-    /
+-    *
+-    file_actions: object(c_default='NULL') = ()
+-        A sequence of file action tuples.
+-    setpgroup: object = NULL
+-        The pgroup to use with the POSIX_SPAWN_SETPGROUP flag.
+-    resetids: bool(accept={int}) = False
+-        If the value is `True` the POSIX_SPAWN_RESETIDS will be activated.
+-    setsigmask: object(c_default='NULL') = ()
+-        The sigmask to use with the POSIX_SPAWN_SETSIGMASK flag.
+-    setsigdef: object(c_default='NULL') = ()
+-        The sigmask to use with the POSIX_SPAWN_SETSIGDEF flag.
+-    scheduler: object = NULL
+-        A tuple with the scheduler policy (optional) and parameters.
+-
+-Execute the program specified by path in a new process.
+-[clinic start generated code]*/
+ 
+ static PyObject *
+-os_posix_spawn_impl(PyObject *module, path_t *path, PyObject *argv,
+-                    PyObject *env, PyObject *file_actions,
+-                    PyObject *setpgroup, int resetids, PyObject *setsigmask,
+-                    PyObject *setsigdef, PyObject *scheduler)
+-/*[clinic end generated code: output=45dfa4c515d09f2c input=2891c2f1d457e39b]*/
++py_posix_spawn(int use_posix_spawnp, PyObject *module, path_t *path, PyObject *argv,
++               PyObject *env, PyObject *file_actions,
++               PyObject *setpgroup, int resetids, PyObject *setsigmask,
++               PyObject *setsigdef, PyObject *scheduler)
+ {
+     EXECV_CHAR **argvlist = NULL;
+     EXECV_CHAR **envlist = NULL;
+@@ -5465,9 +5438,19 @@ os_posix_spawn_impl(PyObject *module, path_t *path, PyObject *argv,
+     attrp = &attr;
+ 
+     _Py_BEGIN_SUPPRESS_IPH
+-    err_code = posix_spawn(&pid, path->narrow,
+-                           file_actionsp, attrp, argvlist, envlist);
++#ifdef HAVE_POSIX_SPAWNP
++    if (use_posix_spawnp) {
++        err_code = posix_spawnp(&pid, path->narrow,
++                                file_actionsp, attrp, argvlist, envlist);
++    }
++    else
++#endif /* HAVE_POSIX_SPAWNP */
++    {
++        err_code = posix_spawn(&pid, path->narrow,
++                               file_actionsp, attrp, argvlist, envlist);
++    }
+     _Py_END_SUPPRESS_IPH
++
+     if (err_code) {
+         errno = err_code;
+         PyErr_SetFromErrnoWithFilenameObject(PyExc_OSError, path->object);
+@@ -5491,7 +5474,90 @@ exit:
+     Py_XDECREF(temp_buffer);
+     return result;
+ }
+-#endif /* HAVE_POSIX_SPAWN */
++
++
++/*[clinic input]
++
++os.posix_spawn
++    path: path_t
++        Path of executable file.
++    argv: object
++        Tuple or list of strings.
++    env: object
++        Dictionary of strings mapping to strings.
++    /
++    *
++    file_actions: object(c_default='NULL') = ()
++        A sequence of file action tuples.
++    setpgroup: object = NULL
++        The pgroup to use with the POSIX_SPAWN_SETPGROUP flag.
++    resetids: bool(accept={int}) = False
++        If the value is `True` the POSIX_SPAWN_RESETIDS will be activated.
++    setsigmask: object(c_default='NULL') = ()
++        The sigmask to use with the POSIX_SPAWN_SETSIGMASK flag.
++    setsigdef: object(c_default='NULL') = ()
++        The sigmask to use with the POSIX_SPAWN_SETSIGDEF flag.
++    scheduler: object = NULL
++        A tuple with the scheduler policy (optional) and parameters.
++
++Execute the program specified by path in a new process.
++[clinic start generated code]*/
++
++static PyObject *
++os_posix_spawn_impl(PyObject *module, path_t *path, PyObject *argv,
++                    PyObject *env, PyObject *file_actions,
++                    PyObject *setpgroup, int resetids, PyObject *setsigmask,
++                    PyObject *setsigdef, PyObject *scheduler)
++/*[clinic end generated code: output=45dfa4c515d09f2c input=2891c2f1d457e39b]*/
++{
++    return py_posix_spawn(0, module, path, argv, env, file_actions,
++                          setpgroup, resetids, setsigmask, setsigdef,
++                          scheduler);
++}
++ #endif /* HAVE_POSIX_SPAWN */
++
++
++
++#ifdef HAVE_POSIX_SPAWNP
++/*[clinic input]
++
++os.posix_spawnp
++    path: path_t
++        Path of executable file.
++    argv: object
++        Tuple or list of strings.
++    env: object
++        Dictionary of strings mapping to strings.
++    /
++    *
++    file_actions: object(c_default='NULL') = ()
++        A sequence of file action tuples.
++    setpgroup: object = NULL
++        The pgroup to use with the POSIX_SPAWN_SETPGROUP flag.
++    resetids: bool(accept={int}) = False
++        If the value is `True` the POSIX_SPAWN_RESETIDS will be activated.
++    setsigmask: object(c_default='NULL') = ()
++        The sigmask to use with the POSIX_SPAWN_SETSIGMASK flag.
++    setsigdef: object(c_default='NULL') = ()
++        The sigmask to use with the POSIX_SPAWN_SETSIGDEF flag.
++    scheduler: object = NULL
++        A tuple with the scheduler policy (optional) and parameters.
++
++Execute the program specified by path in a new process.
++[clinic start generated code]*/
++
++static PyObject *
++os_posix_spawnp_impl(PyObject *module, path_t *path, PyObject *argv,
++                     PyObject *env, PyObject *file_actions,
++                     PyObject *setpgroup, int resetids, PyObject *setsigmask,
++                     PyObject *setsigdef, PyObject *scheduler)
++/*[clinic end generated code: output=7955dc0edc82b8c3 input=b7576eb25b1ed9eb]*/
++{
++    return py_posix_spawn(1, module, path, argv, env, file_actions,
++                          setpgroup, resetids, setsigmask, setsigdef,
++                          scheduler);
++}
++#endif /* HAVE_POSIX_SPAWNP */
+ 
+ 
+ #if defined(HAVE_SPAWNV) || defined(HAVE_WSPAWNV)
+@@ -13056,6 +13122,7 @@ static PyMethodDef posix_methods[] = {
+     OS_GETPRIORITY_METHODDEF
+     OS_SETPRIORITY_METHODDEF
+     OS_POSIX_SPAWN_METHODDEF
++    OS_POSIX_SPAWNP_METHODDEF
+ #ifdef HAVE_READLINK
+     {"readlink",        (PyCFunction)posix_readlink,
+                         METH_VARARGS | METH_KEYWORDS,
+diff --git a/configure b/configure
+index 829dd69..820fa5e 100755
+--- a/configure
++++ b/configure
+@@ -11499,7 +11499,7 @@ for ac_func in alarm accept4 setitimer getitimer bind_textdomain_codeset chown \
+  initgroups kill killpg lchown lockf linkat lstat lutimes mmap \
+  memrchr mbrtowc mkdirat mkfifo \
+  mkfifoat mknod mknodat mktime mremap nice openat pathconf pause pipe2 plock poll \
+- posix_fallocate posix_fadvise posix_spawn pread preadv preadv2 \
++ posix_fallocate posix_fadvise posix_spawn posix_spawnp pread preadv preadv2 \
+  pthread_init pthread_kill putenv pwrite pwritev pwritev2 readlink readlinkat readv realpath renameat \
+  sem_open sem_timedwait sem_getvalue sem_unlink sendfile setegid seteuid \
+  setgid sethostname \
+diff --git a/configure.ac b/configure.ac
+index f1cc8e9..493d28f 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -3583,7 +3583,7 @@ AC_CHECK_FUNCS(alarm accept4 setitimer getitimer bind_textdomain_codeset chown \
+  initgroups kill killpg lchown lockf linkat lstat lutimes mmap \
+  memrchr mbrtowc mkdirat mkfifo \
+  mkfifoat mknod mknodat mktime mremap nice openat pathconf pause pipe2 plock poll \
+- posix_fallocate posix_fadvise posix_spawn pread preadv preadv2 \
++ posix_fallocate posix_fadvise posix_spawn posix_spawnp pread preadv preadv2 \
+  pthread_init pthread_kill putenv pwrite pwritev pwritev2 readlink readlinkat readv realpath renameat \
+  sem_open sem_timedwait sem_getvalue sem_unlink sendfile setegid seteuid \
+  setgid sethostname \
+diff --git a/pyconfig.h.in b/pyconfig.h.in
+index ebab5ff..d6ab0b5 100644
+--- a/pyconfig.h.in
++++ b/pyconfig.h.in
+@@ -713,6 +713,9 @@
+ /* Define to 1 if you have the `posix_spawn' function. */
+ #undef HAVE_POSIX_SPAWN
+ 
++/* Define to 1 if you have the `posix_spawnp' function. */
++#undef HAVE_POSIX_SPAWNP
++
+ /* Define to 1 if you have the `pread' function. */
+ #undef HAVE_PREAD
+ 
+-- 
+2.23.0
+

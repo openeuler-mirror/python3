@@ -1,0 +1,136 @@
+From 39129f265d74f4ed4aa424b8bc54075621622d07 Mon Sep 17 00:00:00 2001
+From: Victor Stinner <vstinner@redhat.com>
+Date: Wed, 25 Sep 2019 15:52:49 +0200
+Subject: [PATCH] bpo-36046: posix_spawn() doesn't support uid/gid (GH-16384)
+
+* subprocess.Popen now longer uses posix_spawn() if uid, gid or gids are set.
+* test_subprocess: add "nobody" and "nfsnobody" group names for test_group().
+* test_subprocess: test_user() and test_group() are now also tested with close_fds=False.
+
+Conflict:NA
+Reference:https://github.com/python/cpython/commit/faca8553425c231d867dcabf6a69a9dd21118b6c
+
+Signed-off-by: hanxinke <hanxinke@huawei.com>
+---
+ Lib/subprocess.py           |  5 ++-
+ Lib/test/test_subprocess.py | 71 ++++++++++++++++++++-----------------
+ 2 files changed, 42 insertions(+), 34 deletions(-)
+
+diff --git a/Lib/subprocess.py b/Lib/subprocess.py
+index 6e0eaf9..c80d07e 100644
+--- a/Lib/subprocess.py
++++ b/Lib/subprocess.py
+@@ -1646,7 +1646,10 @@ class Popen(object):
+                     and (p2cread == -1 or p2cread > 2)
+                     and (c2pwrite == -1 or c2pwrite > 2)
+                     and (errwrite == -1 or errwrite > 2)
+-                    and not start_new_session):
++                    and not start_new_session
++                    and gid is None
++                    and gids is None
++                    and uid is None):
+                 self._posix_spawn(args, executable, env, restore_signals,
+                                   p2cread, p2cwrite,
+                                   c2pread, c2pwrite,
+diff --git a/Lib/test/test_subprocess.py b/Lib/test/test_subprocess.py
+index aa2f539..8360c6f 100644
+--- a/Lib/test/test_subprocess.py
++++ b/Lib/test/test_subprocess.py
+@@ -1540,7 +1540,7 @@ class RunFuncTestCase(BaseTestCase):
+ 
+ 
+ def _get_test_grp_name():
+-    for name_group in ('staff', 'nogroup', 'grp'):
++    for name_group in ('staff', 'nogroup', 'grp', 'nobody', 'nfsnobody'):
+         if grp:
+             try:
+                 grp.getgrnam(name_group)
+@@ -1717,24 +1717,27 @@ class POSIXProcessTestCase(BaseTestCase):
+             test_users.append(name_uid)
+ 
+         for user in test_users:
+-            with self.subTest(user=user):
+-                try:
+-                    output = subprocess.check_output(
+-                            [sys.executable, "-c",
+-                             "import os; print(os.getuid())"],
+-                            user=user)
+-                except PermissionError:  # errno.EACCES
+-                    pass
+-                except OSError as e:
+-                    if e.errno not in (errno.EACCES, errno.EPERM):
+-                        raise
+-                else:
+-                    if isinstance(user, str):
+-                        user_uid = pwd.getpwnam(user).pw_uid
++            # posix_spawn() may be used with close_fds=False
++            for close_fds in (False, True):
++                with self.subTest(user=user, close_fds=close_fds):
++                    try:
++                        output = subprocess.check_output(
++                                [sys.executable, "-c",
++                                 "import os; print(os.getuid())"],
++                                user=user,
++                                close_fds=close_fds)
++                    except PermissionError:  # (EACCES, EPERM)
++                        pass
++                    except OSError as e:
++                        if e.errno not in (errno.EACCES, errno.EPERM):
++                            raise
+                     else:
+-                        user_uid = user
+-                    child_user = int(output)
+-                    self.assertEqual(child_user, user_uid)
++                        if isinstance(user, str):
++                            user_uid = pwd.getpwnam(user).pw_uid
++                        else:
++                            user_uid = user
++                        child_user = int(output)
++                        self.assertEqual(child_user, user_uid)
+ 
+         with self.assertRaises(ValueError):
+             subprocess.check_call([sys.executable, "-c", "pass"], user=-1)
+@@ -1758,23 +1761,25 @@ class POSIXProcessTestCase(BaseTestCase):
+             group_list.append(name_group)
+ 
+         for group in group_list + [gid]:
+-            with self.subTest(group=group):
+-                try:
+-                    output = subprocess.check_output(
+-                            [sys.executable, "-c",
+-                             "import os; print(os.getgid())"],
+-                            group=group)
+-                except OSError as e:
+-                    if e.errno != errno.EPERM:
+-                        raise
+-                else:
+-                    if isinstance(group, str):
+-                        group_gid = grp.getgrnam(group).gr_gid
++            # posix_spawn() may be used with close_fds=False
++            for close_fds in (False, True):
++                with self.subTest(group=group, close_fds=close_fds):
++                    try:
++                        output = subprocess.check_output(
++                                [sys.executable, "-c",
++                                 "import os; print(os.getgid())"],
++                                group=group,
++                                close_fds=close_fds)
++                    except PermissionError:  # (EACCES, EPERM)
++                        pass
+                     else:
+-                        group_gid = group
++                        if isinstance(group, str):
++                            group_gid = grp.getgrnam(group).gr_gid
++                        else:
++                            group_gid = group
+ 
+-                    child_group = int(output)
+-                    self.assertEqual(child_group, group_gid)
++                        child_group = int(output)
++                        self.assertEqual(child_group, group_gid)
+ 
+         # make sure we bomb on negative values
+         with self.assertRaises(ValueError):
+-- 
+2.23.0
+

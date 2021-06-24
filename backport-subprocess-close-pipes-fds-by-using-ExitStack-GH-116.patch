@@ -1,0 +1,91 @@
+From 5b3807f6215fc2c5e14963bb48665426a53580f5 Mon Sep 17 00:00:00 2001
+From: Giampaolo Rodola <g.rodola@gmail.com>
+Date: Tue, 29 Jan 2019 22:14:24 +0100
+Subject: [PATCH] subprocess: close pipes/fds by using ExitStack (GH-11686)
+
+Close pipes/fds in subprocess by using ExitStack.
+
+"In case of premature failure on X.Close() or os.close(X) the remaining pipes/fds will remain "open". Perhaps it makes sense to use contextlib.ExitStack."
+- Rationale: https://github.com/python/cpython/pull/11575#discussion_r250288394
+
+Conflict:NA
+Reference:https://github.com/python/cpython/commit/bafa8487f77fa076de3a06755399daf81cb75598
+
+Signed-off-by: hanxinke <hanxinke@huawei.com>
+---
+ Lib/subprocess.py                             | 35 ++++++++++---------
+ .../2019-01-29-17-24-52.bpo-35537.Q0ktFC.rst  |  4 +++
+ 2 files changed, 22 insertions(+), 17 deletions(-)
+ create mode 100644 Misc/NEWS.d/next/Library/2019-01-29-17-24-52.bpo-35537.Q0ktFC.rst
+
+diff --git a/Lib/subprocess.py b/Lib/subprocess.py
+index b02b701..332c19f 100644
+--- a/Lib/subprocess.py
++++ b/Lib/subprocess.py
+@@ -51,6 +51,7 @@ import signal
+ import builtins
+ import warnings
+ import errno
++import contextlib
+ from time import monotonic as _time
+ 
+ # Exception classes used by this module.
+@@ -1092,28 +1093,28 @@ class Popen(object):
+         # self._devnull is not always defined.
+         devnull_fd = getattr(self, '_devnull', None)
+ 
+-        if _mswindows:
+-            if p2cread != -1:
+-                p2cread.Close()
+-            if c2pwrite != -1:
+-                c2pwrite.Close()
+-            if errwrite != -1:
+-                errwrite.Close()
+-        else:
+-            if p2cread != -1 and p2cwrite != -1 and p2cread != devnull_fd:
+-                os.close(p2cread)
+-            if c2pwrite != -1 and c2pread != -1 and c2pwrite != devnull_fd:
+-                os.close(c2pwrite)
+-            if errwrite != -1 and errread != -1 and errwrite != devnull_fd:
+-                os.close(errwrite)
++        with contextlib.ExitStack() as stack:
++            if _mswindows:
++                if p2cread != -1:
++                    stack.callback(p2cread.Close)
++                if c2pwrite != -1:
++                    stack.callback(c2pwrite.Close)
++                if errwrite != -1:
++                    stack.callback(errwrite.Close)
++            else:
++                if p2cread != -1 and p2cwrite != -1 and p2cread != devnull_fd:
++                    stack.callback(os.close, p2cread)
++                if c2pwrite != -1 and c2pread != -1 and c2pwrite != devnull_fd:
++                    stack.callback(os.close, c2pwrite)
++                if errwrite != -1 and errread != -1 and errwrite != devnull_fd:
++                    stack.callback(os.close, errwrite)
+ 
+-        if devnull_fd is not None:
+-            os.close(devnull_fd)
++            if devnull_fd is not None:
++                stack.callback(os.close, devnull_fd)
+ 
+         # Prevent a double close of these handles/fds from __init__ on error.
+         self._closed_child_pipe_fds = True
+ 
+-
+     if _mswindows:
+         #
+         # Windows methods
+diff --git a/Misc/NEWS.d/next/Library/2019-01-29-17-24-52.bpo-35537.Q0ktFC.rst b/Misc/NEWS.d/next/Library/2019-01-29-17-24-52.bpo-35537.Q0ktFC.rst
+new file mode 100644
+index 0000000..2a9588e
+--- /dev/null
++++ b/Misc/NEWS.d/next/Library/2019-01-29-17-24-52.bpo-35537.Q0ktFC.rst
+@@ -0,0 +1,4 @@
++An ExitStack is now used internally within subprocess.POpen to clean up pipe
++file handles. No behavior change in normal operation. But if closing one
++handle were ever to cause an exception, the others will now be closed
++instead of leaked.  (patch by Giampaolo Rodola)
+-- 
+2.23.0
+
