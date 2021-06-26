@@ -1,0 +1,36 @@
+From 6fe83a4c10239296cdfe22adb7d1b5fc485b166c Mon Sep 17 00:00:00 2001
+From: hanxinke <hanxinke@huawei.com>
+Date: Thu, 17 Jun 2021 03:12:23 -0400
+Subject: [PATCH] Don't override PYTHONPATH which is already set by the user.
+
+---
+ Modules/main.c | 12 +++++++-----
+ 1 file changed, 7 insertions(+), 5 deletions(-)
+
+diff --git a/Modules/main.c b/Modules/main.c
+index be0807b..bb57198 100644
+--- a/Modules/main.c
++++ b/Modules/main.c
+@@ -1976,12 +1976,14 @@ config_read_env_vars(_PyCoreConfig *config)
+         }
+     }
+ 
+-    wchar_t *path;
+-    int res = config_get_env_var_dup(&path, L"PYTHONPATH", "PYTHONPATH");
+-    if (res < 0) {
+-        return DECODE_LOCALE_ERR("PYTHONPATH", res);
++    if (config->module_search_path_env == NULL) {
++        wchar_t *path;
++        int res = config_get_env_var_dup(&path, L"PYTHONPATH", "PYTHONPATH");
++        if (res < 0) {
++            return DECODE_LOCALE_ERR("PYTHONPATH", res);
++        }
++        config->module_search_path_env = path;
+     }
+-    config->module_search_path_env = path;
+ 
+     if (config->use_hash_seed < 0) {
+         _PyInitError err = config_init_hash_seed(config);
+-- 
+2.23.0
+

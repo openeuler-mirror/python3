@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.9
-Release: 14
+Release: 15
 License: Python
 
 %global branchversion 3.7
@@ -142,6 +142,9 @@ Patch6033:  backport-42146-Fix-memory-leak-in-subprocess.Popen-in-cas.patch
 Patch6034:  backport-42146-Unify-cleanup-in-subprocess_fork_exec-GH-2.patch
 patch6035:  backport-Remove-thread-objects-which-finished-process-its-request.patch
 patch6036:  backport-CVE-2021-3426.patch
+patch6037:  backport-32494-Use-gdbm_count-for-dbm_length-if-possible.patch
+
+patch9000:  Don-t-override-PYTHONPATH-which-is-already-set.patch
 
 Recommends: %{name}-help = %{version}-%{release}
 Provides: python%{branchversion} = %{version}-%{release}
@@ -270,6 +273,8 @@ rm Lib/ensurepip/_bundled/*.whl
 %patch6034 -p1
 %patch6035 -p1
 %patch6036 -p1
+%patch6037 -p1
+%patch9000 -p1
 
 sed -i "s/generic_os/%{_vendor}/g" Lib/platform.py
 rm configure pyconfig.h.in
@@ -871,6 +876,13 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Fri Jun 25 2021 hehuazhen<hehuazhen@huawei.com> - 3.7.9-15
+- Type:bugfix
+- CVE:NA
+- SUG:NA
+- DESC:Use gdbm_count for dbm_length if possible
+       Don't override PYTHONPATH which is already set by the user
+
 * Mon May 31 2021 shixuantong<shixuantong@huawei.com> - 3.7.9-14
 - Type:CVE
 - CVE:CVE-2021-3426
