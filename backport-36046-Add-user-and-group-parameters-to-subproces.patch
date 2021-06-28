@@ -1,0 +1,739 @@
+From df76b86c86a24a0b7faefac03e22d702359eb6b5 Mon Sep 17 00:00:00 2001
+From: Patrick McLean <47801044+patrick-mclean@users.noreply.github.com>
+Date: Thu, 12 Sep 2019 10:15:44 -0700
+Subject: [PATCH] bpo-36046: Add user and group parameters to subprocess
+ (GH-11950)
+
+* subprocess: Add user, group and extra_groups paremeters to subprocess.Popen
+
+This adds a `user` parameter to the Popen constructor that will call
+setreuid() in the child before calling exec(). This allows processes
+running as root to safely drop privileges before running the subprocess
+without having to use a preexec_fn.
+
+This also adds a `group` parameter that will call setregid() in
+the child process before calling exec().
+
+Finally an `extra_groups` parameter was added that will call
+setgroups() to set the supplimental groups.
+
+Conflict:NA
+Reference:https://github.com/python/cpython/commit/2b2ead74382513d0bb9ef34504e283a71e6a706f
+
+Signed-off-by: hanxinke <hanxinke@huawei.com>
+---
+ Doc/library/subprocess.rst                    |  32 +++-
+ Lib/multiprocessing/util.py                   |   2 +-
+ Lib/subprocess.py                             | 106 +++++++++++-
+ Lib/test/test_capi.py                         |   6 +-
+ Lib/test/test_subprocess.py                   | 163 +++++++++++++++++-
+ .../2019-02-19-17-32-45.bpo-36046.fX9OPj.rst  |   2 +
+ Modules/_posixsubprocess.c                    | 136 ++++++++++++++-
+ 7 files changed, 428 insertions(+), 19 deletions(-)
+ create mode 100644 Misc/NEWS.d/next/Library/2019-02-19-17-32-45.bpo-36046.fX9OPj.rst
+
+diff --git a/Doc/library/subprocess.rst b/Doc/library/subprocess.rst
+index 9f2a056..3461297 100644
+--- a/Doc/library/subprocess.rst
++++ b/Doc/library/subprocess.rst
+@@ -339,8 +339,9 @@ functions.
+                  stderr=None, preexec_fn=None, close_fds=True, shell=False, \
+                  cwd=None, env=None, universal_newlines=None, \
+                  startupinfo=None, creationflags=0, restore_signals=True, \
+-                 start_new_session=False, pass_fds=(), *, \
+-                 encoding=None, errors=None, text=None)
++                 start_new_session=False, pass_fds=(), *, group=None, \
++                 extra_groups=None, user=None, encoding=None, errors=None, \
++                 text=None)
+ 
+    Execute a child program in a new process.  On POSIX, the class uses
+    :meth:`os.execvp`-like behavior to execute the child program.  On Windows,
+@@ -520,6 +521,33 @@ functions.
+    .. versionchanged:: 3.2
+       *start_new_session* was added.
+ 
++   If *group* is not ``None``, the setregid() system call will be made in the
++   child process prior to the execution of the subprocess. If the provided
++   value is a string, it will be looked up via :func:`grp.getgrnam()` and
++   the value in ``gr_gid`` will be used. If the value is an integer, it
++   will be passed verbatim. (POSIX only)
++
++   .. availability:: POSIX
++   .. versionadded:: 3.9
++
++   If *extra_groups* is not ``None``, the setgroups() system call will be
++   made in the child process prior to the execution of the subprocess.
++   Strings provided in *extra_groups* will be looked up via
++   :func:`grp.getgrnam()` and the values in ``gr_gid`` will be used.
++   Integer values will be passed verbatim. (POSIX only)
++
++   .. availability:: POSIX
++   .. versionadded:: 3.9
++
++   If *user* is not ``None``, the setreuid() system call will be made in the
++   child process prior to the execution of the subprocess. If the provided
++   value is a string, it will be looked up via :func:`pwd.getpwnam()` and
++   the value in ``pw_uid`` will be used. If the value is an integer, it will
++   be passed verbatim. (POSIX only)
++
++   .. availability:: POSIX
++   .. versionadded:: 3.9
++
+    If *env* is not ``None``, it must be a mapping that defines the environment
+    variables for the new process; these are used instead of the default
+    behavior of inheriting the current process' environment.
+diff --git a/Lib/multiprocessing/util.py b/Lib/multiprocessing/util.py
+index 327fe42..c7e9b85 100644
+--- a/Lib/multiprocessing/util.py
++++ b/Lib/multiprocessing/util.py
+@@ -452,7 +452,7 @@ def spawnv_passfds(path, args, passfds):
+         return _posixsubprocess.fork_exec(
+             args, [os.fsencode(path)], True, passfds, None, None,
+             -1, -1, -1, -1, -1, -1, errpipe_read, errpipe_write,
+-            False, False, None)
++            False, False, None, None, None, None)
+     finally:
+         os.close(errpipe_read)
+         os.close(errpipe_write)
+diff --git a/Lib/subprocess.py b/Lib/subprocess.py
+index 332c19f..12ca9ef 100644
+--- a/Lib/subprocess.py
++++ b/Lib/subprocess.py
+@@ -54,6 +54,15 @@ import errno
+ import contextlib
+ from time import monotonic as _time
+ 
++try:
++    import pwd
++except ImportError:
++    pwd = None
++try:
++    import grp
++except ImportError:
++    grp = None
++
+ # Exception classes used by this module.
+ class SubprocessError(Exception): pass
+ 
+@@ -720,6 +729,12 @@ class Popen(object):
+ 
+       start_new_session (POSIX only)
+ 
++      group (POSIX only)
++
++      extra_groups (POSIX only)
++
++      user (POSIX only)
++
+       pass_fds (POSIX only)
+ 
+       encoding and errors: Text mode encoding and error handling to use for
+@@ -736,7 +751,8 @@ class Popen(object):
+                  shell=False, cwd=None, env=None, universal_newlines=None,
+                  startupinfo=None, creationflags=0,
+                  restore_signals=True, start_new_session=False,
+-                 pass_fds=(), *, encoding=None, errors=None, text=None):
++                 pass_fds=(), *, user=None, group=None, extra_groups=None,
++                 encoding=None, errors=None, text=None):
+         """Create new Popen instance."""
+         _cleanup()
+         # Held while anything is calling waitpid before returncode has been
+@@ -825,6 +841,78 @@ class Popen(object):
+ 
+         self._closed_child_pipe_fds = False
+ 
++        gid = None
++        if group is not None:
++            if not hasattr(os, 'setregid'):
++                raise ValueError("The 'group' parameter is not supported on the "
++                                 "current platform")
++
++            elif isinstance(group, str):
++                if grp is None:
++                    raise ValueError("The group parameter cannot be a string "
++                                     "on systems without the grp module")
++
++                gid = grp.getgrnam(group).gr_gid
++            elif isinstance(group, int):
++                gid = group
++            else:
++                raise TypeError("Group must be a string or an integer, not {}"
++                                .format(type(group)))
++
++            if gid < 0:
++                raise ValueError(f"Group ID cannot be negative, got {gid}")
++
++        gids = None
++        if extra_groups is not None:
++            if not hasattr(os, 'setgroups'):
++                raise ValueError("The 'extra_groups' parameter is not "
++                                 "supported on the current platform")
++
++            elif isinstance(extra_groups, str):
++                raise ValueError("Groups must be a list, not a string")
++
++            gids = []
++            for extra_group in extra_groups:
++                if isinstance(extra_group, str):
++                    if grp is None:
++                        raise ValueError("Items in extra_groups cannot be "
++                                         "strings on systems without the "
++                                         "grp module")
++
++                    gids.append(grp.getgrnam(extra_group).gr_gid)
++                elif isinstance(extra_group, int):
++                    gids.append(extra_group)
++                else:
++                    raise TypeError("Items in extra_groups must be a string "
++                                    "or integer, not {}"
++                                    .format(type(extra_group)))
++
++            # make sure that the gids are all positive here so we can do less
++            # checking in the C code
++            for gid_check in gids:
++                if gid_check < 0:
++                    raise ValueError(f"Group ID cannot be negative, got {gid_check}")
++
++        uid = None
++        if user is not None:
++            if not hasattr(os, 'setreuid'):
++                raise ValueError("The 'user' parameter is not supported on "
++                                 "the current platform")
++
++            elif isinstance(user, str):
++                if pwd is None:
++                    raise ValueError("The user parameter cannot be a string "
++                                     "on systems without the pwd module")
++
++                uid = pwd.getpwnam(user).pw_uid
++            elif isinstance(user, int):
++                uid = user
++            else:
++                raise TypeError("User must be a string or an integer")
++
++            if uid < 0:
++                raise ValueError(f"User ID cannot be negative, got {uid}")
++
+         try:
+             if p2cwrite != -1:
+                 self.stdin = io.open(p2cwrite, 'wb', bufsize)
+@@ -849,7 +937,9 @@ class Popen(object):
+                                 p2cread, p2cwrite,
+                                 c2pread, c2pwrite,
+                                 errread, errwrite,
+-                                restore_signals, start_new_session)
++                                restore_signals,
++                                gid, gids, uid,
++                                start_new_session)
+         except:
+             # Cleanup if the child failed starting.
+             for f in filter(None, (self.stdin, self.stdout, self.stderr)):
+@@ -1219,7 +1309,9 @@ class Popen(object):
+                            p2cread, p2cwrite,
+                            c2pread, c2pwrite,
+                            errread, errwrite,
+-                           unused_restore_signals, unused_start_new_session):
++                           unused_restore_signals,
++                           unused_gid, unused_gids, unused_uid,
++                           unused_start_new_session):
+             """Execute program (MS Windows version)"""
+ 
+             assert not pass_fds, "pass_fds not supported on Windows."
+@@ -1526,7 +1618,9 @@ class Popen(object):
+                            p2cread, p2cwrite,
+                            c2pread, c2pwrite,
+                            errread, errwrite,
+-                           restore_signals, start_new_session):
++                           restore_signals,
++                           gid, gids, uid,
++                           start_new_session):
+             """Execute program (POSIX version)"""
+ 
+             if isinstance(args, (str, bytes)):
+@@ -1607,7 +1701,9 @@ class Popen(object):
+                             p2cread, p2cwrite, c2pread, c2pwrite,
+                             errread, errwrite,
+                             errpipe_read, errpipe_write,
+-                            restore_signals, start_new_session, preexec_fn)
++                            restore_signals, start_new_session,
++                            gid, gids, uid,
++                            preexec_fn)
+                     self._child_created = True
+                 finally:
+                     # be sure the FD is closed no matter what
+diff --git a/Lib/test/test_capi.py b/Lib/test/test_capi.py
+index 3ed2263..dcff095 100644
+--- a/Lib/test/test_capi.py
++++ b/Lib/test/test_capi.py
+@@ -96,7 +96,7 @@ class CAPITest(unittest.TestCase):
+             def __len__(self):
+                 return 1
+         self.assertRaises(TypeError, _posixsubprocess.fork_exec,
+-                          1,Z(),3,(1, 2),5,6,7,8,9,10,11,12,13,14,15,16,17)
++                          1,Z(),3,(1, 2),5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20)
+         # Issue #15736: overflow in _PySequence_BytesToCharpArray()
+         class Z(object):
+             def __len__(self):
+@@ -104,7 +104,7 @@ class CAPITest(unittest.TestCase):
+             def __getitem__(self, i):
+                 return b'x'
+         self.assertRaises(MemoryError, _posixsubprocess.fork_exec,
+-                          1,Z(),3,(1, 2),5,6,7,8,9,10,11,12,13,14,15,16,17)
++                          1,Z(),3,(1, 2),5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20)
+ 
+     @unittest.skipUnless(_posixsubprocess, '_posixsubprocess required for this test.')
+     def test_subprocess_fork_exec(self):
+@@ -114,7 +114,7 @@ class CAPITest(unittest.TestCase):
+ 
+         # Issue #15738: crash in subprocess_fork_exec()
+         self.assertRaises(TypeError, _posixsubprocess.fork_exec,
+-                          Z(),[b'1'],3,(1, 2),5,6,7,8,9,10,11,12,13,14,15,16,17)
++                          Z(),[b'1'],3,(1, 2),5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20)
+ 
+     @unittest.skipIf(MISSING_C_DOCSTRINGS,
+                      "Signature information for builtins requires docstrings")
+diff --git a/Lib/test/test_subprocess.py b/Lib/test/test_subprocess.py
+index eebd348..6c2fd61 100644
+--- a/Lib/test/test_subprocess.py
++++ b/Lib/test/test_subprocess.py
+@@ -19,6 +19,7 @@ import shutil
+ import threading
+ import gc
+ import textwrap
++import json
+ from test.support import FakePath
+ 
+ try:
+@@ -33,6 +34,15 @@ try:
+ except ImportError:
+     _testcapi = None
+ 
++try:
++    import pwd
++except ImportError:
++    pwd = None
++try:
++    import grp
++except ImportError:
++    grp = None
++
+ if support.PGO:
+     raise unittest.SkipTest("test is not helpful for PGO")
+ 
+@@ -1681,6 +1691,139 @@ class POSIXProcessTestCase(BaseTestCase):
+             child_sid = int(output)
+             self.assertNotEqual(parent_sid, child_sid)
+ 
++    @unittest.skipUnless(hasattr(os, 'setreuid'), 'no setreuid on platform')
++    def test_user(self):
++        # For code coverage of the user parameter.  We don't care if we get an
++        # EPERM error from it depending on the test execution environment, that
++        # still indicates that it was called.
++
++        uid = os.geteuid()
++        test_users = [65534 if uid != 65534 else 65533, uid]
++        name_uid = "nobody" if sys.platform != 'darwin' else "unknown"
++
++        if pwd is not None:
++            test_users.append(name_uid)
++
++        for user in test_users:
++            with self.subTest(user=user):
++                try:
++                    output = subprocess.check_output(
++                            [sys.executable, "-c",
++                             "import os; print(os.getuid())"],
++                            user=user)
++                except OSError as e:
++                    if e.errno != errno.EPERM:
++                        raise
++                else:
++                    if isinstance(user, str):
++                        user_uid = pwd.getpwnam(user).pw_uid
++                    else:
++                        user_uid = user
++                    child_user = int(output)
++                    self.assertEqual(child_user, user_uid)
++
++        with self.assertRaises(ValueError):
++            subprocess.check_call([sys.executable, "-c", "pass"], user=-1)
++
++        if pwd is None:
++            with self.assertRaises(ValueError):
++                subprocess.check_call([sys.executable, "-c", "pass"], user=name_uid)
++
++    @unittest.skipIf(hasattr(os, 'setreuid'), 'setreuid() available on platform')
++    def test_user_error(self):
++        with self.assertRaises(ValueError):
++            subprocess.check_call([sys.executable, "-c", "pass"], user=65535)
++
++    @unittest.skipUnless(hasattr(os, 'setregid'), 'no setregid() on platform')
++    def test_group(self):
++        gid = os.getegid()
++        group_list = [65534 if gid != 65534 else 65533]
++        name_group = "nogroup" if sys.platform != 'darwin' else "staff"
++
++        if grp is not None:
++            group_list.append(name_group)
++
++        for group in group_list + [gid]:
++            with self.subTest(group=group):
++                try:
++                    output = subprocess.check_output(
++                            [sys.executable, "-c",
++                             "import os; print(os.getgid())"],
++                            group=group)
++                except OSError as e:
++                    if e.errno != errno.EPERM:
++                        raise
++                else:
++                    if isinstance(group, str):
++                        group_gid = grp.getgrnam(group).gr_gid
++                    else:
++                        group_gid = group
++
++                    child_group = int(output)
++                    self.assertEqual(child_group, group_gid)
++
++        # make sure we bomb on negative values
++        with self.assertRaises(ValueError):
++            subprocess.check_call([sys.executable, "-c", "pass"], group=-1)
++
++        if grp is None:
++            with self.assertRaises(ValueError):
++                subprocess.check_call([sys.executable, "-c", "pass"], group=name_group)
++
++    @unittest.skipIf(hasattr(os, 'setregid'), 'setregid() available on platform')
++    def test_group_error(self):
++        with self.assertRaises(ValueError):
++            subprocess.check_call([sys.executable, "-c", "pass"], group=65535)
++
++    @unittest.skipUnless(hasattr(os, 'setgroups'), 'no setgroups() on platform')
++    def test_extra_groups(self):
++        gid = os.getegid()
++        group_list = [65534 if gid != 65534 else 65533]
++        name_group = "nogroup" if sys.platform != 'darwin' else "staff"
++        perm_error = False
++
++        if grp is not None:
++            group_list.append(name_group)
++
++        try:
++            output = subprocess.check_output(
++                    [sys.executable, "-c",
++                     "import os, sys, json; json.dump(os.getgroups(), sys.stdout)"],
++                    extra_groups=group_list)
++        except OSError as ex:
++            if ex.errno != errno.EPERM:
++                raise
++            perm_error = True
++
++        else:
++            parent_groups = os.getgroups()
++            child_groups = json.loads(output)
++
++            if grp is not None:
++                desired_gids = [grp.getgrnam(g).gr_gid if isinstance(g, str) else g
++                                for g in group_list]
++            else:
++                desired_gids = group_list
++
++            if perm_error:
++                self.assertEqual(set(child_groups), set(parent_groups))
++            else:
++                self.assertEqual(set(desired_gids), set(child_groups))
++
++        # make sure we bomb on negative values
++        with self.assertRaises(ValueError):
++            subprocess.check_call([sys.executable, "-c", "pass"], extra_groups=[-1])
++
++        if grp is None:
++            with self.assertRaises(ValueError):
++                subprocess.check_call([sys.executable, "-c", "pass"],
++                                      extra_groups=[name_group])
++
++    @unittest.skipIf(hasattr(os, 'setgroups'), 'setgroups() available on platform')
++    def test_extra_groups_error(self):
++        with self.assertRaises(ValueError):
++            subprocess.check_call([sys.executable, "-c", "pass"], extra_groups=[])
++
+     def test_run_abort(self):
+         # returncode handles signal termination
+         with support.SuppressCrashReport():
+@@ -2730,13 +2873,23 @@ class POSIXProcessTestCase(BaseTestCase):
+                 ([b"arg"], [b"exe"], 123,  [b"env"]),
+                 ([b"arg"], [b"exe"], None, 123),
+             ):
+-                with self.assertRaises(TypeError):
++                with self.assertRaises(TypeError) as err:
+                     _posixsubprocess.fork_exec(
+                         args, exe_list,
+                         True, (), cwd, env_list,
+                         -1, -1, -1, -1,
+                         1, 2, 3, 4,
+-                        True, True, func)
++                        True, True,
++                        False, [], 0,
++                        func)
++                # Attempt to prevent
++                # "TypeError: fork_exec() takes exactly N arguments (M given)"
++                # from passing the test.  More refactoring to have us start
++                # with a valid *args list, confirm a good call with that works
++                # before mutating it in various ways to ensure that bad calls
++                # with individual arg type errors raise a typeerror would be
++                # ideal.  Saving that for a future PR...
++                self.assertNotIn('takes exactly', str(err.exception))
+         finally:
+             if not gc_enabled:
+                 gc.disable()
+@@ -2775,7 +2928,9 @@ class POSIXProcessTestCase(BaseTestCase):
+                         True, fds_to_keep, None, [b"env"],
+                         -1, -1, -1, -1,
+                         1, 2, 3, 4,
+-                        True, True, None)
++                        True, True,
++                        None, None, None,
++                        None)
+                 self.assertIn('fds_to_keep', str(c.exception))
+         finally:
+             if not gc_enabled:
+@@ -3198,7 +3353,7 @@ class MiscTests(unittest.TestCase):
+ 
+     def test__all__(self):
+         """Ensure that __all__ is populated properly."""
+-        intentionally_excluded = {"list2cmdline", "Handle"}
++        intentionally_excluded = {"list2cmdline", "Handle", "pwd", "grp"}
+         exported = set(subprocess.__all__)
+         possible_exports = set()
+         import types
+diff --git a/Misc/NEWS.d/next/Library/2019-02-19-17-32-45.bpo-36046.fX9OPj.rst b/Misc/NEWS.d/next/Library/2019-02-19-17-32-45.bpo-36046.fX9OPj.rst
+new file mode 100644
+index 0000000..5e809d6
+--- /dev/null
++++ b/Misc/NEWS.d/next/Library/2019-02-19-17-32-45.bpo-36046.fX9OPj.rst
+@@ -0,0 +1,2 @@
++Added ``user``, ``group`` and ``extra_groups`` parameters to the
++subprocess.Popen constructor. Patch by Patrick McLean.
+diff --git a/Modules/_posixsubprocess.c b/Modules/_posixsubprocess.c
+index 3cf0683..caa8d7a 100644
+--- a/Modules/_posixsubprocess.c
++++ b/Modules/_posixsubprocess.c
+@@ -20,6 +20,11 @@
+ #ifdef HAVE_DIRENT_H
+ #include <dirent.h>
+ #endif
++#ifdef HAVE_GRP_H
++#include <grp.h>
++#endif /* HAVE_GRP_H */
++
++#include "posixmodule.h"
+ 
+ #ifdef _Py_MEMORY_SANITIZER
+ # include <sanitizer/msan_interface.h>
+@@ -47,6 +52,12 @@
+ # define FD_DIR "/proc/self/fd"
+ #endif
+ 
++#ifdef NGROUPS_MAX
++#define MAX_GROUPS NGROUPS_MAX
++#else
++#define MAX_GROUPS 64
++#endif
++
+ #define POSIX_CALL(call)   do { if ((call) == -1) goto error; } while (0)
+ 
+ 
+@@ -405,6 +416,9 @@ child_exec(char *const exec_array[],
+            int errpipe_read, int errpipe_write,
+            int close_fds, int restore_signals,
+            int call_setsid,
++           int call_setgid, gid_t gid,
++           int call_setgroups, size_t groups_size, const gid_t *groups,
++           int call_setuid, uid_t uid,
+            PyObject *py_fds_to_keep,
+            PyObject *preexec_fn,
+            PyObject *preexec_fn_args_tuple)
+@@ -482,6 +496,22 @@ child_exec(char *const exec_array[],
+         POSIX_CALL(setsid());
+ #endif
+ 
++#ifdef HAVE_SETGROUPS
++    if (call_setgroups)
++        POSIX_CALL(setgroups(groups_size, groups));
++#endif /* HAVE_SETGROUPS */
++
++#ifdef HAVE_SETREGID
++    if (call_setgid)
++        POSIX_CALL(setregid(gid, gid));
++#endif /* HAVE_SETREGID */
++
++#ifdef HAVE_SETREUID
++    if (call_setuid)
++        POSIX_CALL(setreuid(uid, uid));
++#endif /* HAVE_SETREUID */
++
++
+     reached_preexec = 1;
+     if (preexec_fn != Py_None && preexec_fn_args_tuple) {
+         /* This is where the user has asked us to deadlock their program. */
+@@ -561,26 +591,33 @@ subprocess_fork_exec(PyObject* self, PyObject *args)
+     PyObject *env_list, *preexec_fn;
+     PyObject *process_args, *converted_args = NULL, *fast_args = NULL;
+     PyObject *preexec_fn_args_tuple = NULL;
++    PyObject *groups_list;
++    PyObject *uid_object, *gid_object;
+     int p2cread, p2cwrite, c2pread, c2pwrite, errread, errwrite;
+     int errpipe_read, errpipe_write, close_fds, restore_signals;
+     int call_setsid;
++    int call_setgid = 0, call_setgroups = 0, call_setuid = 0;
++    uid_t uid;
++    gid_t gid, *groups = NULL;
+     PyObject *cwd_obj, *cwd_obj2;
+     const char *cwd;
+     pid_t pid;
+     int need_to_reenable_gc = 0;
+     char *const *exec_array, *const *argv = NULL, *const *envp = NULL;
+-    Py_ssize_t arg_num;
++    Py_ssize_t arg_num, num_groups = 0;
+     int need_after_fork = 0;
+     int saved_errno = 0;
+ 
+     if (!PyArg_ParseTuple(
+-            args, "OOpO!OOiiiiiiiiiiO:fork_exec",
++            args, "OOpO!OOiiiiiiiiiiOOOO:fork_exec",
+             &process_args, &executable_list,
+             &close_fds, &PyTuple_Type, &py_fds_to_keep,
+             &cwd_obj, &env_list,
+             &p2cread, &p2cwrite, &c2pread, &c2pwrite,
+             &errread, &errwrite, &errpipe_read, &errpipe_write,
+-            &restore_signals, &call_setsid, &preexec_fn))
++            &restore_signals, &call_setsid,
++            &gid_object, &groups_list, &uid_object,
++            &preexec_fn))
+         return NULL;
+ 
+     if (close_fds && errpipe_write < 3) {  /* precondition */
+@@ -672,6 +709,90 @@ subprocess_fork_exec(PyObject* self, PyObject *args)
+         cwd_obj2 = NULL;
+     }
+ 
++    if (groups_list != Py_None) {
++#ifdef HAVE_SETGROUPS
++        Py_ssize_t i;
++        unsigned long gid;
++
++        if (!PyList_Check(groups_list)) {
++            PyErr_SetString(PyExc_TypeError,
++                    "setgroups argument must be a list");
++            goto cleanup;
++        }
++        num_groups = PySequence_Size(groups_list);
++
++        if (num_groups < 0)
++            goto cleanup;
++
++        if (num_groups > MAX_GROUPS) {
++            PyErr_SetString(PyExc_ValueError, "too many groups");
++            goto cleanup;
++        }
++
++        if ((groups = PyMem_RawMalloc(num_groups * sizeof(gid_t))) == NULL) {
++            PyErr_SetString(PyExc_MemoryError,
++                    "failed to allocate memory for group list");
++            goto cleanup;
++        }
++
++        for (i = 0; i < num_groups; i++) {
++            PyObject *elem;
++            elem = PySequence_GetItem(groups_list, i);
++            if (!elem)
++                goto cleanup;
++            if (!PyLong_Check(elem)) {
++                PyErr_SetString(PyExc_TypeError,
++                                "groups must be integers");
++                Py_DECREF(elem);
++                goto cleanup;
++            } else {
++                /* In posixmodule.c UnsignedLong is used as a fallback value
++                * if the value provided does not fit in a Long. Since we are
++                * already doing the bounds checking on the Python side, we
++                * can go directly to an UnsignedLong here. */
++                if (!_Py_Gid_Converter(elem, &gid)) {
++                    Py_DECREF(elem);
++                    PyErr_SetString(PyExc_ValueError, "invalid group id");
++                    goto cleanup;
++                }
++                groups[i] = gid;
++            }
++            Py_DECREF(elem);
++        }
++        call_setgroups = 1;
++
++#else /* HAVE_SETGROUPS */
++        PyErr_BadInternalCall();
++        goto cleanup;
++#endif /* HAVE_SETGROUPS */
++    }
++
++    if (gid_object != Py_None) {
++#ifdef HAVE_SETREGID
++        if (!_Py_Gid_Converter(gid_object, &gid))
++            goto cleanup;
++
++        call_setgid = 1;
++
++#else /* HAVE_SETREGID */
++        PyErr_BadInternalCall();
++        goto cleanup;
++#endif /* HAVE_SETREUID */
++    }
++
++    if (uid_object != Py_None) {
++#ifdef HAVE_SETREUID
++        if (!_Py_Uid_Converter(uid_object, &uid))
++            goto cleanup;
++
++        call_setuid = 1;
++
++#else /* HAVE_SETREUID */
++        PyErr_BadInternalCall();
++        goto cleanup;
++#endif /* HAVE_SETREUID */
++    }
++
+     /* This must be the last thing done before fork() because we do not
+      * want to call PyOS_BeforeFork() if there is any chance of another
+      * error leading to the cleanup: code without calling fork(). */
+@@ -704,6 +825,8 @@ subprocess_fork_exec(PyObject* self, PyObject *args)
+                    p2cread, p2cwrite, c2pread, c2pwrite,
+                    errread, errwrite, errpipe_read, errpipe_write,
+                    close_fds, restore_signals, call_setsid,
++                   call_setgid, gid, call_setgroups, num_groups, groups,
++                   call_setuid, uid,
+                    py_fds_to_keep, preexec_fn, preexec_fn_args_tuple);
+         _exit(255);
+         return NULL;  /* Dead code to avoid a potential compiler warning. */
+@@ -748,6 +871,8 @@ cleanup:
+         _Py_FreeCharPArray(argv);
+     if (exec_array)
+         _Py_FreeCharPArray(exec_array);
++
++    PyMem_RawFree(groups);
+     Py_XDECREF(converted_args);
+     Py_XDECREF(fast_args);
+     Py_XDECREF(preexec_fn_args_tuple);
+@@ -761,7 +886,10 @@ PyDoc_STRVAR(subprocess_fork_exec_doc,
+ "fork_exec(args, executable_list, close_fds, cwd, env,\n\
+           p2cread, p2cwrite, c2pread, c2pwrite,\n\
+           errread, errwrite, errpipe_read, errpipe_write,\n\
+-          restore_signals, call_setsid, preexec_fn)\n\
++          restore_signals, call_setsid,\n\
++          call_setgid, gid, groups_size, gids,\n\
++          call_setuid, uid,\n\
++          preexec_fn)\n\
+ \n\
+ Forks a child process, closes parent file descriptors as appropriate in the\n\
+ child and dups the few that are needed before calling exec() in the child\n\
+-- 
+2.23.0
+
