@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.8.5
-Release: 11
+Release: 12
 License: Python
 
 %global branchversion 3.8
@@ -62,7 +62,6 @@ BuildRequires: pkgconfig
 BuildRequires: readline-devel
 BuildRequires: system-rpm-config
 BuildRequires: sqlite-devel
-BuildRequires: gdb
 
 BuildRequires: tar
 BuildRequires: tcl-devel
@@ -808,6 +807,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Thu Jul 22 2021 liudabo<liudabo1@huawei.com> - 3.8.5-12
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:deleting gdb build dependency 
+
 * Mon May 31 2021 shixuantong<shixuantong@huawei.com> - 3.8.5-11
 - Type:CVE
 - CVE:CVE-2021-3426 CVE-2021-29921
