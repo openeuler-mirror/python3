@@ -1,0 +1,156 @@
+From 89c00f1226a2841e1f7a53cfb50c21071de922b4 Mon Sep 17 00:00:00 2001
+From: "Miss Islington (bot)"
+ <31488909+miss-islington@users.noreply.github.com>
+Date: Thu, 4 Mar 2021 08:55:24 -0800
+Subject: [PATCH] bpo-37193: Remove thread objects which finished process its
+ request (GH-23127) (GH-24749)
+
+This reverts commit aca67da4fe68d5420401ac1782203d302875eb27.
+(cherry picked from commit b5711c940f70af89f2b4cf081a3fcd83924f3ae7)
+
+Co-authored-by: Jason R. Coombs <jaraco@jaraco.com>
+
+Automerge-Triggered-By: GH:jaraco
+---
+ Lib/socketserver.py                           | 51 ++++++++++++++-----
+ Lib/test/test_socketserver.py                 | 23 +++++++++
+ .../2020-06-12-21-23-20.bpo-37193.wJximU.rst  |  2 +
+ 3 files changed, 64 insertions(+), 12 deletions(-)
+ create mode 100644 Misc/NEWS.d/next/Library/2020-06-12-21-23-20.bpo-37193.wJximU.rst
+
+diff --git a/Lib/socketserver.py b/Lib/socketserver.py
+index 1ad028f..9e94c76 100644
+--- a/Lib/socketserver.py
++++ b/Lib/socketserver.py
+@@ -628,6 +628,39 @@ if hasattr(os, "fork"):
+             self.collect_children(blocking=self.block_on_close)
+ 
+ 
++class _Threads(list):
++    """
++    Joinable list of all non-daemon threads.
++    """
++    def append(self, thread):
++        self.reap()
++        if thread.daemon:
++            return
++        super().append(thread)
++
++    def pop_all(self):
++        self[:], result = [], self[:]
++        return result
++
++    def join(self):
++        for thread in self.pop_all():
++            thread.join()
++
++    def reap(self):
++        self[:] = (thread for thread in self if thread.is_alive())
++
++
++class _NoThreads:
++    """
++    Degenerate version of _Threads.
++    """
++    def append(self, thread):
++        pass
++
++    def join(self):
++        pass
++
++
+ class ThreadingMixIn:
+     """Mix-in class to handle each request in a new thread."""
+ 
+@@ -636,9 +669,9 @@ class ThreadingMixIn:
+     daemon_threads = False
+     # If true, server_close() waits until all non-daemonic threads terminate.
+     block_on_close = True
+-    # For non-daemonic threads, list of threading.Threading objects
++    # Threads object
+     # used by server_close() to wait for all threads completion.
+-    _threads = None
++    _threads = _NoThreads()
+ 
+     def process_request_thread(self, request, client_address):
+         """Same as in BaseServer but as a thread.
+@@ -655,23 +688,17 @@ class ThreadingMixIn:
+ 
+     def process_request(self, request, client_address):
+         """Start a new thread to process the request."""
++        if self.block_on_close:
++            vars(self).setdefault('_threads', _Threads())
+         t = threading.Thread(target = self.process_request_thread,
+                              args = (request, client_address))
+         t.daemon = self.daemon_threads
+-        if not t.daemon and self.block_on_close:
+-            if self._threads is None:
+-                self._threads = []
+-            self._threads.append(t)
++        self._threads.append(t)
+         t.start()
+ 
+     def server_close(self):
+         super().server_close()
+-        if self.block_on_close:
+-            threads = self._threads
+-            self._threads = None
+-            if threads:
+-                for thread in threads:
+-                    thread.join()
++        self._threads.join()
+ 
+ 
+ if hasattr(os, "fork"):
+diff --git a/Lib/test/test_socketserver.py b/Lib/test/test_socketserver.py
+index 6584ba5..78f00d1 100644
+--- a/Lib/test/test_socketserver.py
++++ b/Lib/test/test_socketserver.py
+@@ -278,6 +278,13 @@ class SocketServerTest(unittest.TestCase):
+             t.join()
+             s.server_close()
+ 
++    def test_close_immediately(self):
++        class MyServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
++            pass
++
++        server = MyServer((HOST, 0), lambda: None)
++        server.server_close()
++
+     def test_tcpserver_bind_leak(self):
+         # Issue #22435: the server socket wouldn't be closed if bind()/listen()
+         # failed.
+@@ -492,6 +499,22 @@ class MiscTestCase(unittest.TestCase):
+         self.assertEqual(server.shutdown_called, 1)
+         server.server_close()
+ 
++    def test_threads_reaped(self):
++        """
++        In #37193, users reported a memory leak
++        due to the saving of every request thread. Ensure that
++        not all threads are kept forever.
++        """
++        class MyServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
++            pass
++
++        server = MyServer((HOST, 0), socketserver.StreamRequestHandler)
++        for n in range(10):
++            with socket.create_connection(server.server_address):
++                server.handle_request()
++        self.assertLess(len(server._threads), 10)
++        server.server_close()
++
+ 
+ if __name__ == "__main__":
+     unittest.main()
+diff --git a/Misc/NEWS.d/next/Library/2020-06-12-21-23-20.bpo-37193.wJximU.rst b/Misc/NEWS.d/next/Library/2020-06-12-21-23-20.bpo-37193.wJximU.rst
+new file mode 100644
+index 0000000..fbf56d3
+--- /dev/null
++++ b/Misc/NEWS.d/next/Library/2020-06-12-21-23-20.bpo-37193.wJximU.rst
+@@ -0,0 +1,2 @@
++Fixed memory leak in ``socketserver.ThreadingMixIn`` introduced in Python
++3.7.
+-- 
+2.23.0
+
