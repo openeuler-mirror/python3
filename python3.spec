@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.9
-Release: 15
+Release: 16
 License: Python
 
 %global branchversion 3.7
@@ -144,6 +144,12 @@ patch6035:  backport-Remove-thread-objects-which-finished-process-its-request.pa
 patch6036:  backport-CVE-2021-3426.patch
 patch6037:  backport-32494-Use-gdbm_count-for-dbm_length-if-possible.patch
 
+Patch6038:  backport-36333-36356-Fix-_PyEval_FiniThreads-GH-12432.patch
+Patch6039:  backport-37169-Rewrite-_PyObject_IsFreed-unit-tests-GH-13.patch
+Patch6040:  backport-44363-Get-test_capi-passing-with-address-sanitiz.patch
+Patch6041:  backport-36253-Remove-use-after-free-reference-in-ctypes-.patch
+Patch6042:  backport-36356-Fix-memory-leak-in-_asynciomodule.c-GH-165.patch
+
 patch9000:  Don-t-override-PYTHONPATH-which-is-already-set.patch
 
 Recommends: %{name}-help = %{version}-%{release}
@@ -274,6 +280,11 @@ rm Lib/ensurepip/_bundled/*.whl
 %patch6035 -p1
 %patch6036 -p1
 %patch6037 -p1
+%patch6038 -p1
+%patch6039 -p1
+%patch6040 -p1
+%patch6041 -p1
+%patch6042 -p1
 %patch9000 -p1
 
 sed -i "s/generic_os/%{_vendor}/g" Lib/platform.py
@@ -876,6 +887,16 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Thu Aug 19 2021 hehuazhen<hehuazhen@huawei.com> - 3.7.9-16
+- Type:bugfix
+- CVE:NA
+- SUG:NA
+- DESC:fix _PyEval_FiniThreads
+       rewrite _PyObject_IsFreed unit tests
+       get test_capi passing with address sanitize
+       remove use after free reference in ctypes
+       fix memory leak in _asynciomodule.c
+
 * Fri Jun 25 2021 hehuazhen<hehuazhen@huawei.com> - 3.7.9-15
 - Type:bugfix
 - CVE:NA

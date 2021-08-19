@@ -1,0 +1,31 @@
+From 9932fdc4d7daadcc38e78717d1a538b594a0731d Mon Sep 17 00:00:00 2001
+From: Ben Harper <btharper1221@gmail.com>
+Date: Tue, 10 Sep 2019 11:20:15 -0400
+Subject: [PATCH] bpo-36253: Remove use after free reference in ctypes test
+ suite (GH-12257)
+
+Reference:https://github.com/python/cpython/commit/a9b6033179b64b985394ad351501089a6a94fc9d
+Conflict:NA
+
+---
+ Lib/ctypes/test/test_stringptr.py | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/Lib/ctypes/test/test_stringptr.py b/Lib/ctypes/test/test_stringptr.py
+index 95cd161..c20951f 100644
+--- a/Lib/ctypes/test/test_stringptr.py
++++ b/Lib/ctypes/test/test_stringptr.py
+@@ -70,8 +70,8 @@ class StringPtrTestCase(unittest.TestCase):
+         x = r[0], r[1], r[2], r[3], r[4]
+         self.assertEqual(x, (b"c", b"d", b"e", b"f", b"\000"))
+         del buf
+-        # x1 will NOT be the same as x, usually:
+-        x1 = r[0], r[1], r[2], r[3], r[4]
++        # Because r is a pointer to memory that is freed after deleting buf,
++        # the pointer is hanging and using it would reference freed memory.
+ 
+ if __name__ == '__main__':
+     unittest.main()
+-- 
+2.27.0
+

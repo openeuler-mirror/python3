@@ -1,0 +1,45 @@
+From 46bd8737ab2ea15d644bfde42f1c24504259442e Mon Sep 17 00:00:00 2001
+From: "Miss Islington (bot)"
+ <31488909+miss-islington@users.noreply.github.com>
+Date: Mon, 7 Oct 2019 09:38:00 -0700
+Subject: [PATCH] bpo-36356: Fix memory leak in _asynciomodule.c (GH-16598)
+
+(cherry picked from commit 321def805abc5b7c92c7e90ca90cb2434fdab855)
+
+Co-authored-by: Ben Harper <btharper1221@gmail.com>
+
+Reference:https://github.com/python/cpython/commit/13915a3100608f011b29da2f3716c990f523b631
+Conflict:NA
+
+---
+ Modules/_asynciomodule.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/Modules/_asynciomodule.c b/Modules/_asynciomodule.c
+index 6986802..4828e1c 100644
+--- a/Modules/_asynciomodule.c
++++ b/Modules/_asynciomodule.c
+@@ -33,6 +33,7 @@ static PyObject *asyncio_task_repr_info_func;
+ static PyObject *asyncio_InvalidStateError;
+ static PyObject *asyncio_CancelledError;
+ static PyObject *context_kwname;
++static int module_initialized;
+ 
+ static PyObject *cached_running_holder;
+ static volatile uint64_t cached_running_holder_tsid;
+@@ -3244,6 +3245,12 @@ module_init(void)
+     if (asyncio_mod == NULL) {
+         goto fail;
+     }
++    if (module_initialized != 0) {
++        return 0;
++    } 
++    else {
++        module_initialized = 1;
++    }
+ 
+     current_tasks = PyDict_New();
+     if (current_tasks == NULL) {
+-- 
+2.27.0
+
