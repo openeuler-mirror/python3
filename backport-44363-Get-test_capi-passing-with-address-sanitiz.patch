@@ -1,0 +1,78 @@
+From aa4008139816278d5eec823669fdaa50ae9a16b0 Mon Sep 17 00:00:00 2001
+From: Mark Shannon <mark@hotpy.org>
+Date: Thu, 10 Jun 2021 12:37:22 +0100
+Subject: [PATCH] bpo-44363: Get test_capi passing with address sanitizer
+ (GH-26639)
+
+Reference:https://github.com/python/cpython/commit/31aa0dbff4c1d39c9d77c6c8f4a61d0e46c1268b
+Conflict:NA
+
+---
+ Include/Python.h                                      | 11 ++++++++++-
+ .../Tests/2021-06-10-11-19-43.bpo-44363.-K9jD0.rst    |  2 ++
+ Modules/_testcapimodule.c                             |  5 +++++
+ 3 files changed, 17 insertions(+), 1 deletion(-)
+ create mode 100644 Misc/NEWS.d/next/Tests/2021-06-10-11-19-43.bpo-44363.-K9jD0.rst
+
+diff --git a/Include/Python.h b/Include/Python.h
+index 54ea321..2ebddb9 100644
+--- a/Include/Python.h
++++ b/Include/Python.h
+@@ -63,13 +63,22 @@
+ #include "pyport.h"
+ #include "pymacro.h"
+ 
+-/* A convenient way for code to know if clang's memory sanitizer is enabled. */
++/* A convenient way for code to know if sanitizers are enabled. */
+ #if defined(__has_feature)
+ #  if __has_feature(memory_sanitizer)
+ #    if !defined(_Py_MEMORY_SANITIZER)
+ #      define _Py_MEMORY_SANITIZER
+ #    endif
+ #  endif
++#  if __has_feature(address_sanitizer)
++#    if !defined(_Py_ADDRESS_SANITIZER)
++#      define _Py_ADDRESS_SANITIZER
++#    endif
++#  endif
++#elif defined(__GNUC__)
++#  if defined(__SANITIZE_ADDRESS__)
++#    define _Py_ADDRESS_SANITIZER
++#  endif
+ #endif
+ 
+ #include "pyatomic.h"
+diff --git a/Misc/NEWS.d/next/Tests/2021-06-10-11-19-43.bpo-44363.-K9jD0.rst b/Misc/NEWS.d/next/Tests/2021-06-10-11-19-43.bpo-44363.-K9jD0.rst
+new file mode 100644
+index 0000000..28468cb
+--- /dev/null
++++ b/Misc/NEWS.d/next/Tests/2021-06-10-11-19-43.bpo-44363.-K9jD0.rst
+@@ -0,0 +1,2 @@
++Account for address sanitizer in test_capi. test_capi now passes when run
++GCC address sanitizer.
+diff --git a/Modules/_testcapimodule.c b/Modules/_testcapimodule.c
+index 55cfdb8..a43143a 100644
+--- a/Modules/_testcapimodule.c
++++ b/Modules/_testcapimodule.c
+@@ -4290,6 +4290,10 @@ check_pyobject_forbidden_bytes_is_freed(PyObject *self, PyObject *Py_UNUSED(args
+ static PyObject*
+ check_pyobject_freed_is_freed(PyObject *self, PyObject *Py_UNUSED(args))
+ {
++    /* This test would fail if run with the address sanitizer */
++#ifdef _Py_ADDRESS_SANITIZER
++    Py_RETURN_NONE;
++#else
+     PyObject *op = _PyObject_CallNoArg((PyObject *)&PyBaseObject_Type);
+     if (op == NULL) {
+         return NULL;
+@@ -4299,6 +4303,7 @@ check_pyobject_freed_is_freed(PyObject *self, PyObject *Py_UNUSED(args))
+     Py_REFCNT(op) = 1;
+     /* object memory is freed! */
+     return test_pyobject_is_freed("check_pyobject_freed_is_freed", op);
++#endif
+ }
+ 
+ 
+-- 
+2.27.0
+
