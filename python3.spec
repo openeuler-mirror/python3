@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.9
-Release: 9
+Release: 10
 License: Python
 
 %global branchversion 3.7
@@ -139,6 +139,7 @@ Patch6031:  backport-35823-subprocess-Fix-handling-of-pthread_sigmask.patch
 Patch6032:  backport-35823-Allow-setsid-after-vfork-on-Linux.-GH-2294.patch
 Patch6033:  backport-42146-Fix-memory-leak-in-subprocess.Popen-in-cas.patch
 Patch6034:  backport-42146-Unify-cleanup-in-subprocess_fork_exec-GH-2.patch
+Patch6035:  backport-Remove-thread-objects-which-finished-process-its-request.patch
 
 Provides: python%{branchversion} = %{version}-%{release}
 Provides: python(abi) = %{branchversion}
@@ -264,6 +265,7 @@ rm Lib/ensurepip/_bundled/*.whl
 %patch6032 -p1
 %patch6033 -p1
 %patch6034 -p1
+%patch6035 -p1
 
 sed -i "s/generic_os/%{_vendor}/g" Lib/platform.py
 rm configure pyconfig.h.in
@@ -865,6 +867,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Mon Aug 30 2021 BruceGW<gyl93216@163.com> - 3.7.9-10
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DES:fix memory leak in socketserver.ThreadingMixIn
+
 * Web Jun 23 2021 hanxinke<hanxinke@huawei.com> - 3.7.9-9
 - Type:enhancement
 - CVE:NA
