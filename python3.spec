@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.9
-Release: 16
+Release: 17
 License: Python
 
 %global branchversion 3.7
@@ -149,6 +149,9 @@ Patch6039:  backport-37169-Rewrite-_PyObject_IsFreed-unit-tests-GH-13.patch
 Patch6040:  backport-44363-Get-test_capi-passing-with-address-sanitiz.patch
 Patch6041:  backport-36253-Remove-use-after-free-reference-in-ctypes-.patch
 Patch6042:  backport-36356-Fix-memory-leak-in-_asynciomodule.c-GH-165.patch
+Patch6043:  backport-CVE-2021-3733.patch
+Patch6044:  backport-CVE-2021-3737.patch
+Patch6045:  backport-bpo-44022-Improve-the-regression-test.patch
 
 patch9000:  Don-t-override-PYTHONPATH-which-is-already-set.patch
 
@@ -285,6 +288,9 @@ rm Lib/ensurepip/_bundled/*.whl
 %patch6040 -p1
 %patch6041 -p1
 %patch6042 -p1
+%patch6043 -p1
+%patch6044 -p1
+%patch6045 -p1
 %patch9000 -p1
 
 sed -i "s/generic_os/%{_vendor}/g" Lib/platform.py
@@ -887,6 +893,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Fri Sep 24 2021 shixuantong<shixuantong@huawei.com> - 3.7.9-17
+- Type:CVE
+- CVE:CVE-2021-3733 CVE-2021-3737
+- SUG:NA
+- DESC:fix CVE-2021-3733 CVE-2021-3737
+
 * Thu Aug 19 2021 hehuazhen<hehuazhen@huawei.com> - 3.7.9-16
 - Type:bugfix
 - CVE:NA
