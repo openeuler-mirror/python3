@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.8.5
-Release: 12
+Release: 13
 License: Python
 
 %global branchversion 3.8
@@ -101,6 +101,9 @@ Patch256: backport-Remove-thread-objects-which-finished-process-its-request.patc
 Patch257: backport-Fix-reference-leak-when-Thread-is-never-joined.patch
 Patch6000: backport-CVE-2021-3426.patch
 Patch6001: backport-CVE-2021-29921.patch
+Patch6002:  backport-CVE-2021-3733.patch
+Patch6003:  backport-CVE-2021-3737.patch
+Patch6004:  backport-bpo-44022-Improve-the-regression-test.patch
 
 Provides: python%{branchversion} = %{version}-%{release}
 Provides: python(abi) = %{branchversion}
@@ -200,6 +203,9 @@ rm Lib/ensurepip/_bundled/*.whl
 %patch257 -p1
 %patch6000 -p1
 %patch6001 -p1
+%patch6002 -p1
+%patch6003 -p1
+%patch6004 -p1
 
 rm configure pyconfig.h.in
 
@@ -807,6 +813,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Mon Sep 27 2021 shixuantong<shixuantong@huawei.com> - 3.8.5-13
+- Type:CVE
+- CVE:CVE-2021-3733 CVE-2021-3737
+- SUG:NA
+- DESC:fix CVE-2021-3733 CVE-2021-3737
+
 * Thu Jul 22 2021 liudabo<liudabo1@huawei.com> - 3.8.5-12
 - Type:bugfix
 - ID:NA
