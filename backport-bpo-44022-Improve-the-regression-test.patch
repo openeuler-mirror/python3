@@ -1,0 +1,32 @@
+From e60ab843cbb016fb6ff8b4f418641ac05a9b2fcc Mon Sep 17 00:00:00 2001
+From: "Gregory P. Smith" <greg@krypto.org>
+Date: Wed, 2 Jun 2021 20:43:38 -0700
+Subject: [PATCH] bpo-44022: Improve the regression test. (GH-26503)
+
+It wasn't actually detecting the regression due to the
+assertion being too lenient.
+---
+ Lib/test/test_httplib.py | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/Lib/test/test_httplib.py b/Lib/test/test_httplib.py
+index 2777969..419904d 100644
+--- a/Lib/test/test_httplib.py
++++ b/Lib/test/test_httplib.py
+@@ -1005,7 +1005,12 @@ class BasicTest(TestCase):
+             'r\n' * 32768
+         )
+         resp = client.HTTPResponse(FakeSocket(body))
+-        self.assertRaises(client.HTTPException, resp.begin)
++        with self.assertRaises(client.HTTPException) as cm:
++            resp.begin()
++        # We must assert more because other reasonable errors that we
++        # do not want can also be HTTPException derived.
++        self.assertIn('got more than ', str(cm.exception))
++        self.assertIn('headers', str(cm.exception))
+ 
+     def test_overflowing_chunked_line(self):
+         body = (
+-- 
+1.8.3.1
+
