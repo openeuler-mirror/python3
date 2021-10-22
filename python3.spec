@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.9
-Release: 14
+Release: 15
 License: Python
 
 %global branchversion 3.7
@@ -142,6 +142,9 @@ Patch6031:  backport-35823-subprocess-Fix-handling-of-pthread_sigmask.patch
 Patch6032:  backport-35823-Allow-setsid-after-vfork-on-Linux.-GH-2294.patch
 Patch6033:  backport-42146-Fix-memory-leak-in-subprocess.Popen-in-cas.patch
 Patch6034:  backport-42146-Unify-cleanup-in-subprocess_fork_exec-GH-2.patch
+Patch6036:  backport-CVE-2021-3733.patch
+Patch6037:  backport-CVE-2021-3737.patch
+Patch6038:  backport-bpo-44022-Improve-the-regression-test.patch
 
 Recommends: %{name}-help = %{version}-%{release}
 Provides: python%{branchversion} = %{version}-%{release}
@@ -271,6 +274,9 @@ rm Lib/ensurepip/_bundled/*.whl
 %patch6032 -p1
 %patch6033 -p1 
 %patch6034 -p1
+%patch6036 -p1
+%patch6037 -p1
+%patch6038 -p1
 
 sed -i "s/generic_os/%{_vendor}/g" Lib/platform.py
 rm configure pyconfig.h.in
@@ -872,6 +878,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Fri Oct 8 2021 BruceGW<gyl93216@163.com> - 3.7.9-15
+- Type:CVE
+- CVE:CVE-2021-3733 CVE-2021-3737
+- SUG:NA
+- DESC:fix CVE-2021-3733 CVE-2021-3737
+
 * Web Jun 23 2021 hanxinke<hanxinke@huawei.com> - 3.7.9-14
 - Type:enhancement
 - CVE:NA
