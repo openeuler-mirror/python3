@@ -1,0 +1,100 @@
+From b30b25b26663fb6070b8ed86fe3a20dcb557d05d Mon Sep 17 00:00:00 2001
+From: Antoine Pitrou <antoine@python.org>
+Date: Sat, 15 May 2021 11:51:20 +0200
+Subject: [PATCH] [3.9] bpo-37788: Fix reference leak when Thread is never
+ joined (GH-26103) (GH-26142)
+
+Reference:https://github.com/python/cpython/commit/b30b25b26663fb6070b8ed86fe3a20dcb557d05d
+
+When a Thread is not joined after it has stopped, its lock may remain in the _shutdown_locks set until interpreter shutdown.  If many threads are created this way, the _shutdown_locks set could therefore grow endlessly.  To avoid such a situation, purge expired locks each time a new one is added or removed..
+(cherry picked from commit c10c2ec7a0e06975e8010c56c9c3270f8ea322ec)
+
+Co-authored-by: Antoine Pitrou <antoine@python.org>
+
+Automerge-Triggered-By: GH:pitrou
+---
+ Lib/test/test_threading.py                    |  8 ++++++++
+ Lib/threading.py                              | 19 ++++++++++++++++++-
+ .../2021-05-13-19-07-28.bpo-37788.adeFcf.rst  |  1 +
+ 3 files changed, 27 insertions(+), 1 deletion(-)
+ create mode 100644 Misc/NEWS.d/next/Library/2021-05-13-19-07-28.bpo-37788.adeFcf.rst
+
+diff --git a/Lib/test/test_threading.py b/Lib/test/test_threading.py
+index ac4e7a7..f2e427c 100644
+--- a/Lib/test/test_threading.py
++++ b/Lib/test/test_threading.py
+@@ -762,6 +762,14 @@ class ThreadTests(BaseTestCase):
+                 # Daemon threads must never add it to _shutdown_locks.
+                 self.assertNotIn(tstate_lock, threading._shutdown_locks)
+ 
++    def test_leak_without_join(self):
++        # bpo-37788: Test that a thread which is not joined explicitly
++        # does not leak. Test written for reference leak checks.
++        def noop(): pass
++        with support.wait_threads_exit():
++            threading.Thread(target=noop).start()
++            # Thread.join() is not called
++
+ 
+ class ThreadJoinOnShutdown(BaseTestCase):
+ 
+diff --git a/Lib/threading.py b/Lib/threading.py
+index 813dae2..f8f5954 100644
+--- a/Lib/threading.py
++++ b/Lib/threading.py
+@@ -739,12 +739,27 @@ _active_limbo_lock = _allocate_lock()
+ _active = {}    # maps thread id to Thread object
+ _limbo = {}
+ _dangling = WeakSet()
++
+ # Set of Thread._tstate_lock locks of non-daemon threads used by _shutdown()
+ # to wait until all Python thread states get deleted:
+ # see Thread._set_tstate_lock().
+ _shutdown_locks_lock = _allocate_lock()
+ _shutdown_locks = set()
+ 
++def _maintain_shutdown_locks():
++    """
++    Drop any shutdown locks that don't correspond to running threads anymore.
++
++    Calling this from time to time avoids an ever-growing _shutdown_locks
++    set when Thread objects are not joined explicitly. See bpo-37788.
++
++    This must be called with _shutdown_locks_lock acquired.
++    """
++    # If a lock was released, the corresponding thread has exited
++    to_remove = [lock for lock in _shutdown_locks if not lock.locked()]
++    _shutdown_locks.difference_update(to_remove)
++
++
+ # Main class for threads
+ 
+ class Thread:
+@@ -910,6 +925,7 @@ class Thread:
+ 
+         if not self.daemon:
+             with _shutdown_locks_lock:
++                _maintain_shutdown_locks()
+                 _shutdown_locks.add(self._tstate_lock)
+ 
+     def _bootstrap_inner(self):
+@@ -965,7 +981,8 @@ class Thread:
+         self._tstate_lock = None
+         if not self.daemon:
+             with _shutdown_locks_lock:
+-                _shutdown_locks.discard(lock)
++                # Remove our lock and other released locks from _shutdown_locks
++                _maintain_shutdown_locks()
+ 
+     def _delete(self):
+         "Remove current thread from the dict of currently running threads."
+diff --git a/Misc/NEWS.d/next/Library/2021-05-13-19-07-28.bpo-37788.adeFcf.rst b/Misc/NEWS.d/next/Library/2021-05-13-19-07-28.bpo-37788.adeFcf.rst
+new file mode 100644
+index 0000000..0c33923
+--- /dev/null
++++ b/Misc/NEWS.d/next/Library/2021-05-13-19-07-28.bpo-37788.adeFcf.rst
+@@ -0,0 +1 @@
++Fix a reference leak when a Thread object is never joined.
+-- 
+2.25.1
+
