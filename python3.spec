@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.9
-Release: 17
+Release: 18
 License: Python
 
 %global branchversion 3.7
@@ -154,6 +154,7 @@ Patch6044:  backport-CVE-2021-3737.patch
 Patch6045:  backport-bpo-44022-Improve-the-regression-test.patch
 
 patch9000:  Don-t-override-PYTHONPATH-which-is-already-set.patch
+patch9001:  add-the-sm3-method-for-obtaining-the-salt-value.patch
 
 Recommends: %{name}-help = %{version}-%{release}
 Provides: python%{branchversion} = %{version}-%{release}
@@ -292,6 +293,7 @@ rm Lib/ensurepip/_bundled/*.whl
 %patch6044 -p1
 %patch6045 -p1
 %patch9000 -p1
+%patch9001 -p1
 
 sed -i "s/generic_os/%{_vendor}/g" Lib/platform.py
 rm configure pyconfig.h.in
@@ -893,6 +895,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Sat Oct 30 2021 hanxinke<hanxinke@huawei.com> - 3.7.9-18
+- Type:requirement
+- CVE:NA
+- SUG:NA
+- DESC:add the sm3 method for obtaining the salt value
+
 * Fri Sep 24 2021 shixuantong<shixuantong@huawei.com> - 3.7.9-17
 - Type:CVE
 - CVE:CVE-2021-3733 CVE-2021-3737
