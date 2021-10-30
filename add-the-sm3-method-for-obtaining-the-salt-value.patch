@@ -1,0 +1,34 @@
+From 1e245b53ec5ae96ca6ad11edd72b812f9ae0d141 Mon Sep 17 00:00:00 2001
+From: hanxinke <hanxinke@huawei.com>
+Date: Tue, 3 Aug 2021 09:34:30 +0800
+Subject: [PATCH] add the sm3 method for obtaining the salt value
+
+Signed-off-by: hanxinke <hanxinke@huawei.com>
+---
+ Lib/crypt.py | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/Lib/crypt.py b/Lib/crypt.py
+index 8846602..4c62280 100644
+--- a/Lib/crypt.py
++++ b/Lib/crypt.py
+@@ -54,7 +54,7 @@ def mksalt(method=None, *, rounds=None):
+             if not 4 <= log_rounds <= 31:
+                 raise ValueError('rounds out of the range 2**4 to 2**31')
+         s += f'{log_rounds:02d}$'
+-    elif method.ident in ('5', '6'):  # SHA-2
++    elif method.ident in ('5', '6', 'sm3'):  # SHA-2 and sm3
+         if rounds is not None:
+             if not 1000 <= rounds <= 999_999_999:
+                 raise ValueError('rounds out of the range 1000 to 999_999_999')
+@@ -109,4 +109,7 @@ for _v in 'b', 'y', 'a', '':
+ _add_method('MD5', '1', 8, 34)
+ _add_method('CRYPT', None, 2, 13)
+ 
++# support the sm3 method
++_add_method('SM3', 'sm3', 16, 63)
++
+ del _v, _add_method
+-- 
+2.23.0
+
