@@ -1,7 +1,8 @@
-diff -r 39b9b05c3085 Lib/distutils/sysconfig.py
---- a/Lib/distutils/sysconfig.py	Wed Apr 10 00:27:23 2013 +0200
-+++ b/Lib/distutils/sysconfig.py	Wed Apr 10 10:14:18 2013 +0200
-@@ -362,7 +362,10 @@
+diff --git a/Lib/distutils/sysconfig.py b/Lib/distutils/sysconfig.py
+index 3414a76..5cb3a89 100644
+--- a/Lib/distutils/sysconfig.py
++++ b/Lib/distutils/sysconfig.py
+@@ -146,7 +146,10 @@ def parse_makefile(fn, g=None):
                      done[n] = item = ""
                  if found:
                      after = value[m.end():]
@@ -13,10 +14,11 @@ diff -r 39b9b05c3085 Lib/distutils/sysconfig.py
                      if "$" in after:
                          notdone[name] = value
                      else:
-diff -r 39b9b05c3085 Lib/sysconfig.py
---- a/Lib/sysconfig.py	Wed Apr 10 00:27:23 2013 +0200
-+++ b/Lib/sysconfig.py	Wed Apr 10 10:14:18 2013 +0200
-@@ -296,7 +296,10 @@
+diff --git a/Lib/sysconfig.py b/Lib/sysconfig.py
+index 95b48f6..90b4e27 100644
+--- a/Lib/sysconfig.py
++++ b/Lib/sysconfig.py
+@@ -346,7 +346,10 @@ def _parse_makefile(filename, vars=None, keep_unresolved=True):
  
                  if found:
                      after = value[m.end():]
@@ -28,3 +30,6 @@ diff -r 39b9b05c3085 Lib/sysconfig.py
                      if "$" in after:
                          notdone[name] = value
                      else:
+-- 
+1.8.3.1
+

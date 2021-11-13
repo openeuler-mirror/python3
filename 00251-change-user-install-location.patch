@@ -1,11 +1,11 @@
 diff --git a/Lib/distutils/command/install.py b/Lib/distutils/command/install.py
-index 0258d3d..4ebf50a 100644
+index 26696cf..1826cbc 100644
 --- a/Lib/distutils/command/install.py
 +++ b/Lib/distutils/command/install.py
-@@ -418,8 +418,19 @@ class install(Command):
+@@ -441,8 +441,19 @@ class install(Command):
                      raise DistutilsOptionError(
                            "must not supply exec-prefix without prefix")
-
+ 
 -                self.prefix = os.path.normpath(sys.prefix)
 -                self.exec_prefix = os.path.normpath(sys.exec_prefix)
 +                # self.prefix is set to sys.prefix + /local/
@@ -21,16 +21,16 @@ index 0258d3d..4ebf50a 100644
 +
 +                self.prefix = os.path.normpath(sys.prefix) + addition
 +                self.exec_prefix = os.path.normpath(sys.exec_prefix) + addition
-
+ 
              else:
                  if self.exec_prefix is None:
 diff --git a/Lib/site.py b/Lib/site.py
-index 0fc9200..c95202e 100644
+index 939893e..9bc1a5f 100644
 --- a/Lib/site.py
 +++ b/Lib/site.py
-@@ -322,7 +322,14 @@ def getsitepackages(prefixes=None):
+@@ -380,7 +380,14 @@ def getsitepackages(prefixes=None):
      return sitepackages
-
+ 
  def addsitepackages(known_paths, prefixes=None):
 -    """Add site-packages to sys.path"""
 +    """Add site-packages to sys.path
@@ -41,6 +41,9 @@ index 0fc9200..c95202e 100644
 +    """
 +    if ENABLE_USER_SITE and 'RPM_BUILD_ROOT' not in os.environ:
 +        PREFIXES.insert(0, "/usr/local")
+     _trace("Processing global site-packages")
      for sitedir in getsitepackages(prefixes):
          if os.path.isdir(sitedir):
-             addsitedir(sitedir, known_paths)
+-- 
+1.8.3.1
+
