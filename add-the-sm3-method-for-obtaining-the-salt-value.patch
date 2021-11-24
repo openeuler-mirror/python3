@@ -9,10 +9,10 @@ Signed-off-by: hanxinke <hanxinke@huawei.com>
  1 file changed, 4 insertions(+), 1 deletion(-)
 
 diff --git a/Lib/crypt.py b/Lib/crypt.py
-index 8846602..4c62280 100644
+index 33dbc46..3a7cea1 100644
 --- a/Lib/crypt.py
 +++ b/Lib/crypt.py
-@@ -54,7 +54,7 @@ def mksalt(method=None, *, rounds=None):
+@@ -55,7 +55,7 @@ def mksalt(method=None, *, rounds=None):
              if not 4 <= log_rounds <= 31:
                  raise ValueError('rounds out of the range 2**4 to 2**31')
          s += f'{log_rounds:02d}$'
@@ -21,7 +21,7 @@ index 8846602..4c62280 100644
          if rounds is not None:
              if not 1000 <= rounds <= 999_999_999:
                  raise ValueError('rounds out of the range 1000 to 999_999_999')
-@@ -109,4 +109,7 @@ for _v in 'b', 'y', 'a', '':
+@@ -117,4 +117,7 @@ for _v in 'b', 'y', 'a', '':
  _add_method('MD5', '1', 8, 34)
  _add_method('CRYPT', None, 2, 13)
  
@@ -30,5 +30,5 @@ index 8846602..4c62280 100644
 +
  del _v, _add_method
 -- 
-2.23.0
+1.8.3.1
 
