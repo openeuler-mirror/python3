@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.9
-Release: 11
+Release: 12
 License: Python
 
 %global branchversion 3.7
@@ -144,6 +144,12 @@ Patch6036:  backport-CVE-2021-3733.patch
 Patch6037:  backport-CVE-2021-3737.patch
 Patch6038:  backport-bpo-44022-Improve-the-regression-test.patch
 
+Patch6039:  backport-36333-36356-Fix-_PyEval_FiniThreads-GH-12432.patch
+Patch6040:  backport-37169-Rewrite-_PyObject_IsFreed-unit-tests-GH-13.patch
+Patch6041:  backport-44363-Get-test_capi-passing-with-address-sanitiz.patch
+Patch6042:  backport-36253-Remove-use-after-free-reference-in-ctypes-.patch
+Patch6043:  backport-36356-Fix-memory-leak-in-_asynciomodule.c-GH-165.patch
+
 Provides: python%{branchversion} = %{version}-%{release}
 Provides: python(abi) = %{branchversion}
 
@@ -272,6 +278,11 @@ rm Lib/ensurepip/_bundled/*.whl
 %patch6036 -p1
 %patch6037 -p1
 %patch6038 -p1
+%patch6039 -p1
+%patch6040 -p1
+%patch6041 -p1
+%patch6042 -p1
+%patch6043 -p1
 
 sed -i "s/generic_os/%{_vendor}/g" Lib/platform.py
 rm configure pyconfig.h.in
@@ -873,6 +884,16 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Wed Dec 1 2021 BruceGW<gyl93216@163.com> - 3.7.9-12
+- Type:bugfix
+- CVE:NA
+- SUG:NA
+- DESC:fix _PyEval_FiniThreads
+       rewrite _PyObject_IsFreed unit tests
+       get test_capi passing with address sanitize
+       remove use after free reference in ctypes
+       fix memory leak in _asynciomodule.c
+
 * Mon Sep 27 2021 shixuantong<shixuantong@huawei.com> - 3.7.9-11
 - Type:CVE
 - CVE:CVE-2021-3733 CVE-2021-3737

@@ -1,0 +1,152 @@
+From 9e9ad95b61ec87b3ee32db951b99bd7a67eb8875 Mon Sep 17 00:00:00 2001
+From: Victor Stinner <vstinner@redhat.com>
+Date: Fri, 7 Jun 2019 16:22:21 +0200
+Subject: [PATCH] bpo-37169: Rewrite _PyObject_IsFreed() unit tests (GH-13888)
+
+Replace two Python function calls with a single one to ensure that no
+memory allocation is done between the invalid object is created and
+when _PyObject_IsFreed() is called.
+---
+ Lib/test/test_capi.py                              | 29 +++++++++++-----------
+ .../Tests/2019-06-07-12-23-15.bpo-37169.yfXTFg.rst |  1 +
+ Modules/_testcapimodule.c                          | 27 ++++++++++----------
+ 3 files changed, 30 insertions(+), 27 deletions(-)
+ create mode 100644 Misc/NEWS.d/next/Tests/2019-06-07-12-23-15.bpo-37169.yfXTFg.rst
+
+diff --git a/Lib/test/test_capi.py b/Lib/test/test_capi.py
+index 3ed2263..b0f1416 100644
+--- a/Lib/test/test_capi.py
++++ b/Lib/test/test_capi.py
+@@ -522,28 +522,29 @@ class PyMemDebugTests(unittest.TestCase):
+         code = 'import _testcapi; _testcapi.pyobject_malloc_without_gil()'
+         self.check_malloc_without_gil(code)
+ 
+-    def check_pyobject_is_freed(self, func):
+-        code = textwrap.dedent('''
++    def check_pyobject_is_freed(self, func_name):
++        code = textwrap.dedent(f'''
+             import gc, os, sys, _testcapi
+             # Disable the GC to avoid crash on GC collection
+             gc.disable()
+-            obj = _testcapi.{func}()
+-            error = (_testcapi.pyobject_is_freed(obj) == False)
+-            # Exit immediately to avoid a crash while deallocating
+-            # the invalid object
+-            os._exit(int(error))
++            try:
++                _testcapi.{func_name}()
++                # Exit immediately to avoid a crash while deallocating
++                # the invalid object
++                os._exit(0)
++            except _testcapi.error:
++                os._exit(1)
+         ''')
+-        code = code.format(func=func)
+         assert_python_ok('-c', code, PYTHONMALLOC=self.PYTHONMALLOC)
+ 
+-    def test_pyobject_is_freed_uninitialized(self):
+-        self.check_pyobject_is_freed('pyobject_uninitialized')
++    def test_pyobject_uninitialized_is_freed(self):
++        self.check_pyobject_is_freed('check_pyobject_uninitialized_is_freed')
+ 
+-    def test_pyobject_is_freed_forbidden_bytes(self):
+-        self.check_pyobject_is_freed('pyobject_forbidden_bytes')
++    def test_pyobject_forbidden_bytes_is_freed(self):
++        self.check_pyobject_is_freed('check_pyobject_forbidden_bytes_is_freed')
+ 
+-    def test_pyobject_is_freed_free(self):
+-        self.check_pyobject_is_freed('pyobject_freed')
++    def test_pyobject_freed_is_freed(self):
++        self.check_pyobject_is_freed('check_pyobject_freed_is_freed')
+ 
+ 
+ class PyMemMallocDebugTests(PyMemDebugTests):
+diff --git a/Misc/NEWS.d/next/Tests/2019-06-07-12-23-15.bpo-37169.yfXTFg.rst b/Misc/NEWS.d/next/Tests/2019-06-07-12-23-15.bpo-37169.yfXTFg.rst
+new file mode 100644
+index 0000000..f2f0a8b
+--- /dev/null
++++ b/Misc/NEWS.d/next/Tests/2019-06-07-12-23-15.bpo-37169.yfXTFg.rst
+@@ -0,0 +1 @@
++Rewrite ``_PyObject_IsFreed()`` unit tests.
+diff --git a/Modules/_testcapimodule.c b/Modules/_testcapimodule.c
+index 6996d22..55cfdb8 100644
+--- a/Modules/_testcapimodule.c
++++ b/Modules/_testcapimodule.c
+@@ -4248,15 +4248,17 @@ test_pymem_getallocatorsname(PyObject *self, PyObject *args)
+ 
+ 
+ static PyObject*
+-pyobject_is_freed(PyObject *self, PyObject *op)
++test_pyobject_is_freed(const char *test_name, PyObject *op)
+ {
+-    int res = _PyObject_IsFreed(op);
+-    return PyBool_FromLong(res);
++    if (!_PyObject_IsFreed(op)) {
++        return raiseTestError(test_name, "object is not seen as freed");
++    }
++    Py_RETURN_NONE;
+ }
+ 
+ 
+ static PyObject*
+-pyobject_uninitialized(PyObject *self, PyObject *args)
++check_pyobject_uninitialized_is_freed(PyObject *self, PyObject *Py_UNUSED(args))
+ {
+     PyObject *op = (PyObject *)PyObject_Malloc(sizeof(PyObject));
+     if (op == NULL) {
+@@ -4265,12 +4267,12 @@ pyobject_uninitialized(PyObject *self, PyObject *args)
+     /* Initialize reference count to avoid early crash in ceval or GC */
+     Py_REFCNT(op) = 1;
+     /* object fields like ob_type are uninitialized! */
+-    return op;
++    return test_pyobject_is_freed("check_pyobject_uninitialized_is_freed", op);
+ }
+ 
+ 
+ static PyObject*
+-pyobject_forbidden_bytes(PyObject *self, PyObject *args)
++check_pyobject_forbidden_bytes_is_freed(PyObject *self, PyObject *Py_UNUSED(args))
+ {
+     /* Allocate an incomplete PyObject structure: truncate 'ob_type' field */
+     PyObject *op = (PyObject *)PyObject_Malloc(offsetof(PyObject, ob_type));
+@@ -4281,12 +4283,12 @@ pyobject_forbidden_bytes(PyObject *self, PyObject *args)
+     Py_REFCNT(op) = 1;
+     /* ob_type field is after the memory block: part of "forbidden bytes"
+        when using debug hooks on memory allocatrs! */
+-    return op;
++    return test_pyobject_is_freed("check_pyobject_forbidden_bytes_is_freed", op);
+ }
+ 
+ 
+ static PyObject*
+-pyobject_freed(PyObject *self, PyObject *args)
++check_pyobject_freed_is_freed(PyObject *self, PyObject *Py_UNUSED(args))
+ {
+     PyObject *op = _PyObject_CallNoArg((PyObject *)&PyBaseObject_Type);
+     if (op == NULL) {
+@@ -4296,7 +4298,7 @@ pyobject_freed(PyObject *self, PyObject *args)
+     /* Reset reference count to avoid early crash in ceval or GC */
+     Py_REFCNT(op) = 1;
+     /* object memory is freed! */
+-    return op;
++    return test_pyobject_is_freed("check_pyobject_freed_is_freed", op);
+ }
+ 
+ 
+@@ -4876,10 +4878,9 @@ static PyMethodDef TestMethods[] = {
+     {"pymem_api_misuse", pymem_api_misuse, METH_NOARGS},
+     {"pymem_malloc_without_gil", pymem_malloc_without_gil, METH_NOARGS},
+     {"pymem_getallocatorsname", test_pymem_getallocatorsname, METH_NOARGS},
+-    {"pyobject_is_freed", (PyCFunction)(void(*)(void))pyobject_is_freed, METH_O},
+-    {"pyobject_uninitialized", pyobject_uninitialized, METH_NOARGS},
+-    {"pyobject_forbidden_bytes", pyobject_forbidden_bytes, METH_NOARGS},
+-    {"pyobject_freed", pyobject_freed, METH_NOARGS},
++    {"check_pyobject_uninitialized_is_freed", check_pyobject_uninitialized_is_freed, METH_NOARGS},
++    {"check_pyobject_forbidden_bytes_is_freed", check_pyobject_forbidden_bytes_is_freed, METH_NOARGS},
++    {"check_pyobject_freed_is_freed", check_pyobject_freed_is_freed, METH_NOARGS},
+     {"pyobject_malloc_without_gil", pyobject_malloc_without_gil, METH_NOARGS},
+     {"tracemalloc_track", tracemalloc_track, METH_VARARGS},
+     {"tracemalloc_untrack", tracemalloc_untrack, METH_VARARGS},
+-- 
+1.8.3.1
+
