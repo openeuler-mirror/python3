@@ -2,12 +2,12 @@ Name: python3
 Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
-Version: 3.8.5
-Release: 13
+Version: 3.9.9
+Release: 1
 License: Python
 
-%global branchversion 3.8
-%global pyshortver 38
+%global branchversion 3.9
+%global pyshortver 39
 
 %ifarch %{ix86} x86_64
 %bcond_without optimizations
@@ -86,28 +86,15 @@ Source: https://www.python.org/ftp/python/%{version}/Python-%{version}.tar.xz
 Source1: pyconfig.h
 
 Patch1:   00001-rpath.patch
-Patch102: 00102-lib64.patch
 Patch111: 00111-no-static-lib.patch
-Patch132: 00132-add-rpmbuild-hooks-to-unittest.patch
-Patch160: 00160-disable-test_fs_holes-in-rpm-build.patch
 Patch178: 00178-dont-duplicate-flags-in-sysconfig.patch
-Patch189: 00189-use-rpm-wheels.patch
 Patch205: 00205-make-libpl-respect-lib64.patch
 Patch251: 00251-change-user-install-location.patch
-Patch252: CVE-2020-27619.patch
-Patch254: CVE-2021-3177.patch
-Patch255: backport-CVE-2021-23336.patch
-Patch256: backport-Remove-thread-objects-which-finished-process-its-request.patch
-Patch257: backport-Fix-reference-leak-when-Thread-is-never-joined.patch
-Patch6000: backport-CVE-2021-3426.patch
-Patch6001: backport-CVE-2021-29921.patch
-Patch6002:  backport-CVE-2021-3733.patch
-Patch6003:  backport-CVE-2021-3737.patch
-Patch6004:  backport-bpo-44022-Improve-the-regression-test.patch
+Patch6000: backport-Add--with-wheel-pkg-dir-configure-option.patch
 
 Provides: python%{branchversion} = %{version}-%{release}
 Provides: python(abi) = %{branchversion}
-Provides: python(abi) = 3.7
+Provides: python(abi) = 3.8
 
 Provides: python%{pyshortver} = %{version}-%{release}
 Obsoletes: python%{pyshortver}
@@ -186,27 +173,13 @@ find -name '*.exe' -print -delete
 rm -r Modules/expat
 
 %patch1 -p1
-%patch102 -p1
 %patch111 -p1
-%patch132 -p1
-%patch160 -p1
 %patch178 -p1
-
-%patch189 -p1
-rm Lib/ensurepip/_bundled/*.whl
 %patch205 -p1
 %patch251 -p1
-%patch252 -p1
-%patch254 -p1
-%patch255 -p1
-%patch256 -p1
-%patch257 -p1
 %patch6000 -p1
-%patch6001 -p1
-%patch6002 -p1
-%patch6003 -p1
-%patch6004 -p1
 
+rm Lib/ensurepip/_bundled/*.whl
 rm configure pyconfig.h.in
 
 %build
@@ -241,6 +214,8 @@ pushd ${DebugBuildDir}
 %global _configure $topdir/configure
 
 %configure \
+  --with-platlibdir=%{_lib} \
+  --with-wheel-pkg-dir=%{_datadir}/python-wheels \
   --enable-ipv6 \
   --enable-shared \
   --with-computed-gotos=yes \
@@ -267,6 +242,8 @@ pushd ${OptimizedBuildDir}
 %global _configure $topdir/configure
 
 %configure \
+  --with-platlibdir=%{_lib} \
+  --with-wheel-pkg-dir=%{_datadir}/python-wheels \
   --enable-ipv6 \
   --enable-shared \
   --with-computed-gotos=yes \
@@ -393,7 +370,7 @@ ln -s %{_bindir}/python3 %{buildroot}%{_bindir}/python
 
 mv %{buildroot}%{_bindir}/2to3-%{branchversion} %{buildroot}%{_bindir}/2to3
 
-cp -a %{_libdir}/libpython3.7m.so.1.0 ${RPM_BUILD_ROOT}%{_libdir}
+cp -a %{_libdir}/libpython3.8.so.1.0 ${RPM_BUILD_ROOT}%{_libdir}
 
 %check
 topdir=$(pwd)
@@ -430,6 +407,7 @@ LD_LIBRARY_PATH=$(pwd)/build/optimized $(pwd)/build/optimized/python -m test.reg
 
 export BEP_WHITELIST="$BEP_WHITELIST_TMP"
 export BEP_GTDLIST="$BEP_GTDLIST_TMP"
+
 
 %files
 %license LICENSE
@@ -562,6 +540,7 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{dynload_dir}/zlib.%{SOABI_optimized}.so
 %{dynload_dir}/_statistics.%{SOABI_optimized}.so
 %{dynload_dir}/_xxsubinterpreters.%{SOABI_optimized}.so
+%{dynload_dir}/_zoneinfo.%{SOABI_optimized}.so
 
 %dir %{pylibdir}/site-packages/
 %dir %{pylibdir}/site-packages/__pycache__/
@@ -630,6 +609,7 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 
 %{pylibdir}/urllib
 %{pylibdir}/xml
+%{pylibdir}/zoneinfo
 
 %attr(0755,root,root) %dir %{_prefix}/lib/python%{branchversion}
 %attr(0755,root,root) %dir %{_prefix}/lib/python%{branchversion}/site-packages
@@ -642,7 +622,7 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 
 %{_libdir}/%{py_INSTSONAME_optimized}
 %{_libdir}/libpython3.so
-%{_libdir}/libpython3.7m.so.1.0
+%{_libdir}/libpython3.8.so.1.0
 
 %files -n python3-unversioned-command
 %{_bindir}/python
@@ -787,6 +767,7 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{dynload_dir}/_statistics.%{SOABI_debug}.so
 %{dynload_dir}/_xxsubinterpreters.%{SOABI_debug}.so
 %{dynload_dir}/_posixshmem.%{SOABI_debug}.so
+%{dynload_dir}/_zoneinfo.%{SOABI_debug}.so
 
 %{_libdir}/%{py_INSTSONAME_debug}
 
@@ -813,6 +794,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Thu Dec 23 2021 shixuantong<shixuantong@huawei.com> - 3.9.9-1
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC:update version to 3.9.9
+
 * Mon Sep 27 2021 shixuantong<shixuantong@huawei.com> - 3.8.5-13
 - Type:CVE
 - CVE:CVE-2021-3733 CVE-2021-3737
