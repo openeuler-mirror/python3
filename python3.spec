@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.9
-Release: 18
+Release: 19
 License: Python
 
 %global branchversion 3.7
@@ -152,6 +152,7 @@ Patch6042:  backport-36356-Fix-memory-leak-in-_asynciomodule.c-GH-165.patch
 Patch6043:  backport-CVE-2021-3733.patch
 Patch6044:  backport-CVE-2021-3737.patch
 Patch6045:  backport-bpo-44022-Improve-the-regression-test.patch
+Patch6046:  backport-36285-Fix-integer-overflow-in-the-array-module.patch
 
 patch9000:  Don-t-override-PYTHONPATH-which-is-already-set.patch
 patch9001:  add-the-sm3-method-for-obtaining-the-salt-value.patch
@@ -292,6 +293,7 @@ rm Lib/ensurepip/_bundled/*.whl
 %patch6043 -p1
 %patch6044 -p1
 %patch6045 -p1
+%patch6046 -p1
 %patch9000 -p1
 %patch9001 -p1
 
@@ -895,6 +897,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Wed Dec 29 2021 hehuazhen<hehuazhen@huawei.com> - 3.7.9-19
+- Type:bugfix
+- CVE:NA
+- SUG:NA
+- DESC:fix integer overflow in the array module
+
 * Sat Oct 30 2021 hanxinke<hanxinke@huawei.com> - 3.7.9-18
 - Type:requirement
 - CVE:NA
