@@ -1,7 +1,8 @@
-diff -up Python-3.5.0/Makefile.pre.in.lib Python-3.5.0/Makefile.pre.in
---- Python-3.5.0/Makefile.pre.in.lib	2015-09-21 15:39:47.928286620 +0200
-+++ Python-3.5.0/Makefile.pre.in	2015-09-21 15:42:58.004042762 +0200
-@@ -1340,7 +1340,7 @@ inclinstall:
+diff --git a/Makefile.pre.in b/Makefile.pre.in
+index dc763e7..e99f278 100644
+--- a/Makefile.pre.in
++++ b/Makefile.pre.in
+@@ -1631,7 +1631,7 @@ inclinstall:
  
  # Install the library and miscellaneous stuff needed for extending/embedding
  # This goes into $(exec_prefix)
@@ -10,3 +11,6 @@ diff -up Python-3.5.0/Makefile.pre.in.lib Python-3.5.0/Makefile.pre.in
  
  # pkgconfig directory
  LIBPC=		$(LIBDIR)/pkgconfig
+-- 
+1.8.3.1
+
