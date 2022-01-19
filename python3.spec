@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.9.9
-Release: 1
+Release: 2
 License: Python
 
 %global branchversion 3.9
@@ -92,6 +92,8 @@ Patch205: 00205-make-libpl-respect-lib64.patch
 Patch251: 00251-change-user-install-location.patch
 Patch6000: backport-Add--with-wheel-pkg-dir-configure-option.patch
 
+Patch9000: add-the-sm3-method-for-obtaining-the-salt-value.patch
+
 Provides: python%{branchversion} = %{version}-%{release}
 Provides: python(abi) = %{branchversion}
 Provides: python(abi) = 3.8
@@ -178,6 +180,8 @@ rm -r Modules/expat
 %patch205 -p1
 %patch251 -p1
 %patch6000 -p1
+
+%patch9000 -p1
 
 rm Lib/ensurepip/_bundled/*.whl
 rm configure pyconfig.h.in
@@ -794,6 +798,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Fri Jan 14 2022 hanxinke<hanxinke@huawei.com> - 3.9.9-2
+- Type:requirement
+- ID:NA
+- SUG:NA
+- DESC:add the sm3 method for obtaining the salt value
+
 * Thu Dec 23 2021 shixuantong<shixuantong@huawei.com> - 3.9.9-1
 - Type:enhancement
 - ID:NA
