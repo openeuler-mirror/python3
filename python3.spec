@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.10.0
-Release: 1
+Release: 2
 License: Python
 
 %global branchversion 3.10
@@ -94,7 +94,6 @@ Patch9000:  add-the-sm3-method-for-obtaining-the-salt-value.patch
 
 Provides: python%{branchversion} = %{version}-%{release}
 Provides: python(abi) = %{branchversion}
-Provides: python(abi) = 3.8
 
 Provides: python%{pyshortver} = %{version}-%{release}
 Obsoletes: python%{pyshortver}
@@ -368,8 +367,6 @@ ln -s %{_bindir}/python3 %{buildroot}%{_bindir}/python
 
 mv %{buildroot}%{_bindir}/2to3-%{branchversion} %{buildroot}%{_bindir}/2to3
 
-cp -a %{_libdir}/libpython3.8.so.1.0 ${RPM_BUILD_ROOT}%{_libdir}
-
 %check
 topdir=$(pwd)
 
@@ -623,7 +620,6 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 
 %{_libdir}/%{py_INSTSONAME_optimized}
 %{_libdir}/libpython3.so
-%{_libdir}/libpython3.8.so.1.0
 
 %files -n python3-unversioned-command
 %{_bindir}/python
@@ -796,6 +792,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Mon Jan 24 2022 shixuantong<shixuantong@huawei.com> - 3.10.0-2
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:delete libpython3.8.so.1.0 file
+
 * Sat Nov 13 2021 shixuantong<shixuantong@huawei.com> - 3.10.0-1
 - Type:enhancement
 - ID:NA
