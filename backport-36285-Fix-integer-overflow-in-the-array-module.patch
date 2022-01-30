@@ -1,0 +1,221 @@
+From 3c9fa035a2a94464b8269300c3a15cd115a349db Mon Sep 17 00:00:00 2001
+From: sth <sth.dev@tejp.de>
+Date: Wed, 20 Mar 2019 20:49:39 +0100
+Subject: [PATCH] bpo-36285: Fix integer overflow in the array module.
+ (GH-12317)
+
+---
+ Lib/test/test_array.py                        | 141 ++++++++++++++++++
+ .../2019-03-14-01-09-59.bpo-36285.G-usj8.rst  |   1 +
+ Modules/arraymodule.c                         |   8 +-
+ 3 files changed, 146 insertions(+), 4 deletions(-)
+ create mode 100644 Misc/NEWS.d/next/Library/2019-03-14-01-09-59.bpo-36285.G-usj8.rst
+
+diff --git a/Lib/test/test_array.py b/Lib/test/test_array.py
+index 5fd0238..99ca4f0 100644
+--- a/Lib/test/test_array.py
++++ b/Lib/test/test_array.py
+@@ -4,6 +4,7 @@
+ 
+ import unittest
+ from test import support
++from test.support import _2G
+ import weakref
+ import pickle
+ import operator
+@@ -1394,5 +1395,145 @@ class DoubleTest(FPTest, unittest.TestCase):
+             self.fail("Array of size > maxsize created - MemoryError expected")
+ 
+ 
++class LargeArrayTest(unittest.TestCase):
++    typecode = 'b'
++
++    def example(self, size):
++        # We assess a base memuse of <=2.125 for constructing this array
++        base = array.array(self.typecode, [0, 1, 2, 3, 4, 5, 6, 7]) * (size // 8)
++        base += array.array(self.typecode, [99]*(size % 8) + [8, 9, 10, 11])
++        return base
++
++    @support.bigmemtest(_2G, memuse=2.125)
++    def test_example_data(self, size):
++        example = self.example(size)
++        self.assertEqual(len(example), size+4)
++
++    @support.bigmemtest(_2G, memuse=2.125)
++    def test_access(self, size):
++        example = self.example(size)
++        self.assertEqual(example[0], 0)
++        self.assertEqual(example[-(size+4)], 0)
++        self.assertEqual(example[size], 8)
++        self.assertEqual(example[-4], 8)
++        self.assertEqual(example[size+3], 11)
++        self.assertEqual(example[-1], 11)
++
++    @support.bigmemtest(_2G, memuse=2.125+1)
++    def test_slice(self, size):
++        example = self.example(size)
++        self.assertEqual(list(example[:4]), [0, 1, 2, 3])
++        self.assertEqual(list(example[-4:]), [8, 9, 10, 11])
++        part = example[1:-1]
++        self.assertEqual(len(part), size+2)
++        self.assertEqual(part[0], 1)
++        self.assertEqual(part[-1], 10)
++        del part
++        part = example[::2]
++        self.assertEqual(len(part), (size+5)//2)
++        self.assertEqual(list(part[:4]), [0, 2, 4, 6])
++        if size % 2:
++            self.assertEqual(list(part[-2:]), [9, 11])
++        else:
++            self.assertEqual(list(part[-2:]), [8, 10])
++
++    @support.bigmemtest(_2G, memuse=2.125)
++    def test_count(self, size):
++        example = self.example(size)
++        self.assertEqual(example.count(0), size//8)
++        self.assertEqual(example.count(11), 1)
++
++    @support.bigmemtest(_2G, memuse=2.125)
++    def test_append(self, size):
++        example = self.example(size)
++        example.append(12)
++        self.assertEqual(example[-1], 12)
++
++    @support.bigmemtest(_2G, memuse=2.125)
++    def test_extend(self, size):
++        example = self.example(size)
++        example.extend(iter([12, 13, 14, 15]))
++        self.assertEqual(len(example), size+8)
++        self.assertEqual(list(example[-8:]), [8, 9, 10, 11, 12, 13, 14, 15])
++
++    @support.bigmemtest(_2G, memuse=2.125)
++    def test_frombytes(self, size):
++        example = self.example(size)
++        example.frombytes(b'abcd')
++        self.assertEqual(len(example), size+8)
++        self.assertEqual(list(example[-8:]), [8, 9, 10, 11] + list(b'abcd'))
++
++    @support.bigmemtest(_2G, memuse=2.125)
++    def test_fromlist(self, size):
++        example = self.example(size)
++        example.fromlist([12, 13, 14, 15])
++        self.assertEqual(len(example), size+8)
++        self.assertEqual(list(example[-8:]), [8, 9, 10, 11, 12, 13, 14, 15])
++
++    @support.bigmemtest(_2G, memuse=2.125)
++    def test_index(self, size):
++        example = self.example(size)
++        self.assertEqual(example.index(0), 0)
++        self.assertEqual(example.index(1), 1)
++        self.assertEqual(example.index(7), 7)
++        self.assertEqual(example.index(11), size+3)
++
++    @support.bigmemtest(_2G, memuse=2.125)
++    def test_insert(self, size):
++        example = self.example(size)
++        example.insert(0, 12)
++        example.insert(10, 13)
++        example.insert(size+1, 14)
++        self.assertEqual(len(example), size+7)
++        self.assertEqual(example[0], 12)
++        self.assertEqual(example[10], 13)
++        self.assertEqual(example[size+1], 14)
++
++    @support.bigmemtest(_2G, memuse=2.125)
++    def test_pop(self, size):
++        example = self.example(size)
++        self.assertEqual(example.pop(0), 0)
++        self.assertEqual(example[0], 1)
++        self.assertEqual(example.pop(size+1), 10)
++        self.assertEqual(example[size+1], 11)
++        self.assertEqual(example.pop(1), 2)
++        self.assertEqual(example[1], 3)
++        self.assertEqual(len(example), size+1)
++        self.assertEqual(example.pop(), 11)
++        self.assertEqual(len(example), size)
++
++    @support.bigmemtest(_2G, memuse=2.125)
++    def test_remove(self, size):
++        example = self.example(size)
++        example.remove(0)
++        self.assertEqual(len(example), size+3)
++        self.assertEqual(example[0], 1)
++        example.remove(10)
++        self.assertEqual(len(example), size+2)
++        self.assertEqual(example[size], 9)
++        self.assertEqual(example[size+1], 11)
++
++    @support.bigmemtest(_2G, memuse=2.125)
++    def test_reverse(self, size):
++        example = self.example(size)
++        example.reverse()
++        self.assertEqual(len(example), size+4)
++        self.assertEqual(example[0], 11)
++        self.assertEqual(example[3], 8)
++        self.assertEqual(example[-1], 0)
++        example.reverse()
++        self.assertEqual(len(example), size+4)
++        self.assertEqual(list(example[:4]), [0, 1, 2, 3])
++        self.assertEqual(list(example[-4:]), [8, 9, 10, 11])
++
++    # list takes about 9 bytes per element
++    @support.bigmemtest(_2G, memuse=2.125+9)
++    def test_tolist(self, size):
++        example = self.example(size)
++        ls = example.tolist()
++        self.assertEqual(len(ls), len(example))
++        self.assertEqual(ls[:8], list(example[:8]))
++        self.assertEqual(ls[-8:], list(example[-8:]))
++
+ if __name__ == "__main__":
+     unittest.main()
+diff --git a/Misc/NEWS.d/next/Library/2019-03-14-01-09-59.bpo-36285.G-usj8.rst b/Misc/NEWS.d/next/Library/2019-03-14-01-09-59.bpo-36285.G-usj8.rst
+new file mode 100644
+index 0000000..bf16170
+--- /dev/null
++++ b/Misc/NEWS.d/next/Library/2019-03-14-01-09-59.bpo-36285.G-usj8.rst
+@@ -0,0 +1 @@
++Fix integer overflows in the array module. Patch by Stephan Hohe.
+diff --git a/Modules/arraymodule.c b/Modules/arraymodule.c
+index e6175e7..c307547 100644
+--- a/Modules/arraymodule.c
++++ b/Modules/arraymodule.c
+@@ -1174,7 +1174,7 @@ static PyObject *
+ array_array_remove(arrayobject *self, PyObject *v)
+ /*[clinic end generated code: output=bef06be9fdf9dceb input=0b1e5aed25590027]*/
+ {
+-    int i;
++    Py_ssize_t i;
+ 
+     for (i = 0; i < Py_SIZE(self); i++) {
+         PyObject *selfi;
+@@ -2029,7 +2029,7 @@ array__array_reconstructor_impl(PyObject *module, PyTypeObject *arraytype,
+     switch (mformat_code) {
+     case IEEE_754_FLOAT_LE:
+     case IEEE_754_FLOAT_BE: {
+-        int i;
++        Py_ssize_t i;
+         int le = (mformat_code == IEEE_754_FLOAT_LE) ? 1 : 0;
+         Py_ssize_t itemcount = Py_SIZE(items) / 4;
+         const unsigned char *memstr =
+@@ -2051,7 +2051,7 @@ array__array_reconstructor_impl(PyObject *module, PyTypeObject *arraytype,
+     }
+     case IEEE_754_DOUBLE_LE:
+     case IEEE_754_DOUBLE_BE: {
+-        int i;
++        Py_ssize_t i;
+         int le = (mformat_code == IEEE_754_DOUBLE_LE) ? 1 : 0;
+         Py_ssize_t itemcount = Py_SIZE(items) / 8;
+         const unsigned char *memstr =
+@@ -2106,7 +2106,7 @@ array__array_reconstructor_impl(PyObject *module, PyTypeObject *arraytype,
+     case UNSIGNED_INT64_BE:
+     case SIGNED_INT64_LE:
+     case SIGNED_INT64_BE: {
+-        int i;
++        Py_ssize_t i;
+         const struct mformatdescr mf_descr =
+             mformat_descriptors[mformat_code];
+         Py_ssize_t itemcount = Py_SIZE(items) / mf_descr.size;
+-- 
+2.23.0
+
