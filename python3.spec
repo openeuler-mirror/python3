@@ -3,14 +3,14 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.9
-Release: 16
+Release: 17
 License: Python
 
 %global branchversion 3.7
 %global pyshortver 37
 
 %ifarch %{ix86} x86_64
-%bcond_without optimizations
+%bcond_with optimizations
 %else
 %bcond_with optimizations
 %endif
@@ -879,6 +879,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Thu Feb 10 2022 shixuantong <shixuantong@h-partners.com> - 3.7.9-17
+- Type:bugfix
+- CVE:NA
+- SUG:NA
+- DESC:disable profile guided optimizations for x86_64 and i686 architectures
+
 * Mon Oct 11 2021 liudabo<liudabo1@huawei.com> - 3.7.9-16
 - Type:CVE
 - CVE:CVE-2021-3733 CVE-2021-3737 
