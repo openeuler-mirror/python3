@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.9
-Release: 17
+Release: 18
 License: Python
 
 %global branchversion 3.7
@@ -147,6 +147,8 @@ Patch6036: backport-37193-Remove-thread-objects-which-finished-proce.patch
 Patch6037: backport-CVE-2021-3733.patch
 Patch6038: backport-CVE-2021-3737.patch 
 Patch6039: backport-bpo-44022-Improve-the-regression-test.patch 
+Patch6040:  backport-CVE-2021-4189.patch
+Patch6041:  backport-CVE-2022-0391.patch
 
 Recommends: %{name}-help = %{version}-%{release}
 Provides: python%{branchversion} = %{version}-%{release}
@@ -278,6 +280,8 @@ rm Lib/ensurepip/_bundled/*.whl
 %patch6037 -p1
 %patch6038 -p1
 %patch6039 -p1
+%patch6040 -p1
+%patch6041 -p1
 
 sed -i "s/generic_os/%{_vendor}/g" Lib/platform.py
 rm configure pyconfig.h.in
@@ -879,6 +883,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Thu Feb 17 2022 shixuantong <shixuantong@h-partners.com> - 3.7.9-18
+- Type:CVE
+- CVE:CVE-2021-4189 CVE-2022-0391
+- SUG:NA
+- DESC:fix CVE-2021-4189 CVE-2022-0391
+
 * Thu Feb 10 2022 shixuantong <shixuantong@h-partners.com> - 3.7.9-17
 - Type:bugfix
 - CVE:NA
