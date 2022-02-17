@@ -3,14 +3,14 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.9.9
-Release: 3
+Release: 4
 License: Python
 
 %global branchversion 3.9
 %global pyshortver 39
 
 %ifarch %{ix86} x86_64
-%bcond_without optimizations
+%bcond_with optimizations
 %else
 %bcond_with optimizations
 %endif
@@ -795,6 +795,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Thu Feb 10 2022 shixuantong <shixuantong@h-partners.com> - 3.9.9-4
+- Type:bugfix
+- CVE:NA
+- SUG:NA
+- DESC:disable profile guided optimizations for x86_64 and i686 architectures
+
 * Mon Jan 24 2022 shixuantong<shixuantong@huawei.com> - 3.9.9-3
 - Type:bugfix
 - ID:NA
