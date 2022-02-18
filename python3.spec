@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.9
-Release: 18
+Release: 19
 License: Python
 
 %global branchversion 3.7
@@ -152,6 +152,8 @@ Patch6041:  backport-44363-Get-test_capi-passing-with-address-sanitiz.patch
 Patch6042:  backport-36253-Remove-use-after-free-reference-in-ctypes-.patch
 Patch6043:  backport-36356-Fix-memory-leak-in-_asynciomodule.c-GH-165.patch
 Patch6044:  backport-36285-Fix-integer-overflow-in-the-array-module.patch
+Patch6045:  backport-CVE-2021-4189.patch
+Patch6046:  backport-CVE-2022-0391.patch
 
 Recommends: %{name}-help = %{version}-%{release}
 Provides: python%{branchversion} = %{version}-%{release}
@@ -290,6 +292,8 @@ rm Lib/ensurepip/_bundled/*.whl
 %patch6042 -p1
 %patch6043 -p1
 %patch6044 -p1
+%patch6045 -p1
+%patch6046 -p1
 
 sed -i "s/generic_os/%{_vendor}/g" Lib/platform.py
 rm configure pyconfig.h.in
@@ -891,6 +895,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Thu Feb 17 2022 shixuantong <shixuantong@h-partners.com> - 3.7.9-19
+- Type:CVE
+- CVE:CVE-2021-4189 CVE-2022-0391
+- SUG:NA
+- DESC:fix CVE-2021-4189 CVE-2022-0391
+
 * Thu Feb 10 2022 shixuantong <shixuantong@h-partners.com> - 3.7.9-18
 - Type:bugfix
 - CVE:NA
