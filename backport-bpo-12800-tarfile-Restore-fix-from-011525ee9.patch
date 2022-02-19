@@ -1,0 +1,59 @@
+From 4fedd7123eaf147edd55eabbbd72e0bcc8368e47 Mon Sep 17 00:00:00 2001
+From: Julien Palard <julien@palard.fr>
+Date: Wed, 25 Nov 2020 10:23:17 +0100
+Subject: [PATCH] bpo-12800: tarfile: Restore fix from 011525ee9 (GH-21409)
+
+Restore fix from 011525ee92eb1c13ad1a62d28725a840e28f8160.
+---
+ Lib/tarfile.py                                                    | 3 +++
+ Lib/test/test_tarfile.py                                          | 6 +++---
+ Misc/NEWS.d/next/Library/2020-07-09-11-32-28.bpo-12800.fNgWwx.rst | 4 ++++
+ 3 files changed, 10 insertions(+), 3 deletions(-)
+ create mode 100644 Misc/NEWS.d/next/Library/2020-07-09-11-32-28.bpo-12800.fNgWwx.rst
+
+diff --git a/Lib/tarfile.py b/Lib/tarfile.py
+index 3be5188..6d743da 100755
+--- a/Lib/tarfile.py
++++ b/Lib/tarfile.py
+@@ -2201,6 +2201,9 @@ class TarFile(object):
+         try:
+             # For systems that support symbolic and hard links.
+             if tarinfo.issym():
++                if os.path.lexists(targetpath):
++                    # Avoid FileExistsError on following os.symlink.
++                    os.unlink(targetpath)
+                 os.symlink(tarinfo.linkname, targetpath)
+             else:
+                 # See extract().
+diff --git a/Lib/test/test_tarfile.py b/Lib/test/test_tarfile.py
+index 9133d60..fe68c6f 100644
+--- a/Lib/test/test_tarfile.py
++++ b/Lib/test/test_tarfile.py
+@@ -1314,11 +1314,11 @@ class WriteTest(WriteTestBase, unittest.TestCase):
+                 f.write('something\n')
+             os.symlink(source_file, target_file)
+             tar = tarfile.open(temparchive,'w')
+-            tar.add(source_file)
+-            tar.add(target_file)
++            tar.add(source_file, arcname="source")
++            tar.add(target_file, arcname="symlink")
+             tar.close()
+             # Let's extract it to the location which contains the symlink
+-            tar = tarfile.open(temparchive,'r')
++            tar = tarfile.open(temparchive,'r', errorlevel=2)
+             # this should not raise OSError: [Errno 17] File exists
+             try:
+                 tar.extractall(path=tempdir)
+diff --git a/Misc/NEWS.d/next/Library/2020-07-09-11-32-28.bpo-12800.fNgWwx.rst b/Misc/NEWS.d/next/Library/2020-07-09-11-32-28.bpo-12800.fNgWwx.rst
+new file mode 100644
+index 0000000..fdd7c5e
+--- /dev/null
++++ b/Misc/NEWS.d/next/Library/2020-07-09-11-32-28.bpo-12800.fNgWwx.rst
+@@ -0,0 +1,4 @@
++Extracting a symlink from a tarball should succeed and overwrite the symlink
++if it already exists. The fix is to remove the existing file or symlink
++before extraction. Based on patch by Chris AtLee, Jeffrey Kintscher, and
++Senthil Kumaran.
+-- 
+1.8.3.1
+
