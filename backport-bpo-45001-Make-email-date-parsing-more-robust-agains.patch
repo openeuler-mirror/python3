@@ -1,0 +1,93 @@
+From e9b85afd7dc004460f6d914375ab67d617a8a7ff Mon Sep 17 00:00:00 2001
+From: "Miss Islington (bot)"
+ <31488909+miss-islington@users.noreply.github.com>
+Date: Mon, 30 Aug 2021 11:48:04 -0700
+Subject: [PATCH] bpo-45001: Make email date parsing more robust against
+ malformed input (GH-27946) (GH-27975)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Various date parsing utilities in the email module, such as
+email.utils.parsedate(), are supposed to gracefully handle invalid
+input, typically by raising an appropriate exception or by returning
+None.
+
+The internal email._parseaddr._parsedate_tz() helper used by some of
+these date parsing routines tries to be robust against malformed input,
+but unfortunately it can still crash ungracefully when a non-empty but
+whitespace-only input is passed. This manifests as an unexpected
+IndexError.
+
+In practice, this can happen when parsing an email with only a newline
+inside a ‘Date:’ header, which unfortunately happens occasionally in the
+real world.
+
+Here's a minimal example:
+
+    $ python
+    Python 3.9.6 (default, Jun 30 2021, 10:22:16)
+    [GCC 11.1.0] on linux
+    Type "help", "copyright", "credits" or "license" for more information.
+    >>> import email.utils
+    >>> email.utils.parsedate('foo')
+    >>> email.utils.parsedate(' ')
+    Traceback (most recent call last):
+      File "<stdin>", line 1, in <module>
+      File "/usr/lib/python3.9/email/_parseaddr.py", line 176, in parsedate
+        t = parsedate_tz(data)
+      File "/usr/lib/python3.9/email/_parseaddr.py", line 50, in parsedate_tz
+        res = _parsedate_tz(data)
+      File "/usr/lib/python3.9/email/_parseaddr.py", line 72, in _parsedate_tz
+        if data[0].endswith(',') or data[0].lower() in _daynames:
+    IndexError: list index out of range
+
+The fix is rather straight-forward: guard against empty lists, after
+splitting on whitespace, but before accessing the first element.
+(cherry picked from commit 989f6a3800f06b2bd31cfef7c3269a443ad94fac)
+
+Co-authored-by: wouter bolsterlee <wouter@bolsterl.ee>
+---
+ Lib/email/_parseaddr.py                                           | 2 ++
+ Lib/test/test_email/test_email.py                                 | 2 ++
+ Misc/NEWS.d/next/Library/2021-08-26-16-25-48.bpo-45001.tn_dKp.rst | 2 ++
+ 3 files changed, 6 insertions(+)
+ create mode 100644 Misc/NEWS.d/next/Library/2021-08-26-16-25-48.bpo-45001.tn_dKp.rst
+
+diff --git a/Lib/email/_parseaddr.py b/Lib/email/_parseaddr.py
+index 41ff6f8..178329f 100644
+--- a/Lib/email/_parseaddr.py
++++ b/Lib/email/_parseaddr.py
+@@ -67,6 +67,8 @@ def _parsedate_tz(data):
+     if not data:
+         return
+     data = data.split()
++    if not data:  # This happens for whitespace-only input.
++        return None
+     # The FWS after the comma after the day-of-week is optional, so search and
+     # adjust for this.
+     if data[0].endswith(',') or data[0].lower() in _daynames:
+diff --git a/Lib/test/test_email/test_email.py b/Lib/test/test_email/test_email.py
+index 9e5c6ad..64bcdcc 100644
+--- a/Lib/test/test_email/test_email.py
++++ b/Lib/test/test_email/test_email.py
+@@ -2967,6 +2967,8 @@ def test_formatdate_usegmt(self):
+     def test_parsedate_returns_None_for_invalid_strings(self):
+         self.assertIsNone(utils.parsedate(''))
+         self.assertIsNone(utils.parsedate_tz(''))
++        self.assertIsNone(utils.parsedate(' '))
++        self.assertIsNone(utils.parsedate_tz(' '))
+         self.assertIsNone(utils.parsedate('0'))
+         self.assertIsNone(utils.parsedate_tz('0'))
+         self.assertIsNone(utils.parsedate('A Complete Waste of Time'))
+diff --git a/Misc/NEWS.d/next/Library/2021-08-26-16-25-48.bpo-45001.tn_dKp.rst b/Misc/NEWS.d/next/Library/2021-08-26-16-25-48.bpo-45001.tn_dKp.rst
+new file mode 100644
+index 0000000..55cc409
+--- /dev/null
++++ b/Misc/NEWS.d/next/Library/2021-08-26-16-25-48.bpo-45001.tn_dKp.rst
+@@ -0,0 +1,2 @@
++Made email date parsing more robust against malformed input, namely a
++whitespace-only ``Date:`` header. Patch by Wouter Bolsterlee.
+-- 
+1.8.3.1
+
