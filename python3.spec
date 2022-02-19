@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.9
-Release: 21
+Release: 22
 License: Python
 
 %global branchversion 3.7
@@ -155,6 +155,11 @@ Patch6045:  backport-bpo-44022-Improve-the-regression-test.patch
 Patch6046:  backport-36285-Fix-integer-overflow-in-the-array-module.patch
 Patch6047:  backport-CVE-2021-4189.patch
 Patch6048:  backport-CVE-2022-0391.patch
+Patch6049:  backport-bpo-12800-tarfile-Restore-fix-from-011525ee9.patch
+Patch6050:  backport-bpo-42183-Fix-a-stack-overflow-error-for-asyncio-Tas.patch
+Patch6051:  backport-bpo-41815-SQLite-segfault-if-backup-called-on-closed.patch
+Patch6052:  backport-bpo-45001-Make-email-date-parsing-more-robust-agains.patch
+Patch6053:  backport-3.7-bpo-43124-Fix-smtplib-multiple-CRLF-injection-GH.patch
 
 patch9000:  Don-t-override-PYTHONPATH-which-is-already-set.patch
 patch9001:  add-the-sm3-method-for-obtaining-the-salt-value.patch
@@ -298,6 +303,11 @@ rm Lib/ensurepip/_bundled/*.whl
 %patch6046 -p1
 %patch6047 -p1
 %patch6048 -p1
+%patch6049 -p1
+%patch6050 -p1
+%patch6051 -p1
+%patch6052 -p1
+%patch6053 -p1
 
 %patch9000 -p1
 %patch9001 -p1
@@ -902,6 +912,16 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Sat Feb 19 2022 shixuantong <shixuantong@h-partners.com> - 3.7.9-22
+- Type:bugfix
+- CVE:NA
+- SUG:NA
+- DESC:bpo-43124: Fix smtplib multiple CRLF injection
+       bpo-12800: tarfile: Restore fix from 011525ee9
+       bpo-41815: SQLite: segfault if backup called on closed database
+       bpo-42183: Fix a stack overflow error for asyncio Task or Future repr()
+       bpo-45001: Make email date parsing more robust against malformed input
+
 * Thu Feb 17 2022 shixuantong <shixuantong@h-partners.com> - 3.7.9-21
 - Type:CVE
 - CVE:CVE-2021-4189 CVE-2022-0391
