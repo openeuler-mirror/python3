@@ -1,0 +1,128 @@
+From d2cc04cd3024869101e894f73307944d98d187c8 Mon Sep 17 00:00:00 2001
+From: "Miss Islington (bot)"
+ <31488909+miss-islington@users.noreply.github.com>
+Date: Mon, 30 Aug 2021 12:16:24 -0700
+Subject: [PATCH] [3.7] bpo-43124: Fix smtplib multiple CRLF injection
+ (GH-25987) (GH-28037)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-authored-by: Miguel Brito <5544985+miguendes@users.noreply.github.com>
+
+Co-authored-by: Łukasz Langa <lukasz@langa.pl>
+(cherry picked from commit 0897253f426068ea6a6fbe0ada01689af9ef1019)
+---
+ Lib/smtplib.py                                     | 11 +++--
+ Lib/test/test_smtplib.py                           | 55 ++++++++++++++++++++++
+ .../2021-05-08-11-50-46.bpo-43124.2CTM6M.rst       |  2 +
+ 3 files changed, 65 insertions(+), 3 deletions(-)
+ create mode 100644 Misc/NEWS.d/next/Security/2021-05-08-11-50-46.bpo-43124.2CTM6M.rst
+
+diff --git a/Lib/smtplib.py b/Lib/smtplib.py
+index 22d5097..345f03d 100755
+--- a/Lib/smtplib.py
++++ b/Lib/smtplib.py
+@@ -361,10 +361,15 @@ def send(self, s):
+     def putcmd(self, cmd, args=""):
+         """Send a command to the server."""
+         if args == "":
+-            str = '%s%s' % (cmd, CRLF)
++            s = cmd
+         else:
+-            str = '%s %s%s' % (cmd, args, CRLF)
+-        self.send(str)
++            s = f'{cmd} {args}'
++        if '\r' in s or '\n' in s:
++            s = s.replace('\n', '\\n').replace('\r', '\\r')
++            raise ValueError(
++                f'command and arguments contain prohibited newline characters: {s}'
++            )
++        self.send(f'{s}{CRLF}')
+ 
+     def getreply(self):
+         """Get a reply from the server.
+diff --git a/Lib/test/test_smtplib.py b/Lib/test/test_smtplib.py
+index b4149d3..a8c7402 100644
+--- a/Lib/test/test_smtplib.py
++++ b/Lib/test/test_smtplib.py
+@@ -282,6 +282,16 @@ def testEXPNNotImplemented(self):
+         self.assertEqual(smtp.getreply(), expected)
+         smtp.quit()
+ 
++    def test_issue43124_putcmd_escapes_newline(self):
++        # see: https://bugs.python.org/issue43124
++        smtp = smtplib.SMTP(HOST, self.port, local_hostname='localhost',
++                            timeout=10)  # support.LOOPBACK_TIMEOUT in newer Pythons
++        self.addCleanup(smtp.close)
++        with self.assertRaises(ValueError) as exc:
++            smtp.putcmd('helo\nX-INJECTED')
++        self.assertIn("prohibited newline characters", str(exc.exception))
++        smtp.quit()
++
+     def testVRFY(self):
+         smtp = smtplib.SMTP(HOST, self.port, local_hostname='localhost', timeout=3)
+         expected = (252, b'Cannot VRFY user, but will accept message ' + \
+@@ -351,6 +361,51 @@ def testSendNeedingDotQuote(self):
+         mexpect = '%s%s\n%s' % (MSG_BEGIN, m, MSG_END)
+         self.assertEqual(self.output.getvalue(), mexpect)
+ 
++    def test_issue43124_escape_localhostname(self):
++        # see: https://bugs.python.org/issue43124
++        # connect and send mail
++        m = 'wazzuuup\nlinetwo'
++        smtp = smtplib.SMTP(HOST, self.port, local_hostname='hi\nX-INJECTED',
++                            timeout=10)  # support.LOOPBACK_TIMEOUT in newer Pythons
++        self.addCleanup(smtp.close)
++        with self.assertRaises(ValueError) as exc:
++            smtp.sendmail("hi@me.com", "you@me.com", m)
++        self.assertIn(
++            "prohibited newline characters: ehlo hi\\nX-INJECTED",
++            str(exc.exception),
++        )
++        # XXX (see comment in testSend)
++        time.sleep(0.01)
++        smtp.quit()
++
++        debugout = smtpd.DEBUGSTREAM.getvalue()
++        self.assertNotIn("X-INJECTED", debugout)
++
++    def test_issue43124_escape_options(self):
++        # see: https://bugs.python.org/issue43124
++        # connect and send mail
++        m = 'wazzuuup\nlinetwo'
++        smtp = smtplib.SMTP(
++            HOST, self.port, local_hostname='localhost',
++            timeout=10)  # support.LOOPBACK_TIMEOUT in newer Pythons
++
++        self.addCleanup(smtp.close)
++        smtp.sendmail("hi@me.com", "you@me.com", m)
++        with self.assertRaises(ValueError) as exc:
++            smtp.mail("hi@me.com", ["X-OPTION\nX-INJECTED-1", "X-OPTION2\nX-INJECTED-2"])
++        msg = str(exc.exception)
++        self.assertIn("prohibited newline characters", msg)
++        self.assertIn("X-OPTION\\nX-INJECTED-1 X-OPTION2\\nX-INJECTED-2", msg)
++        # XXX (see comment in testSend)
++        time.sleep(0.01)
++        smtp.quit()
++
++        debugout = smtpd.DEBUGSTREAM.getvalue()
++        self.assertNotIn("X-OPTION", debugout)
++        self.assertNotIn("X-OPTION2", debugout)
++        self.assertNotIn("X-INJECTED-1", debugout)
++        self.assertNotIn("X-INJECTED-2", debugout)
++
+     def testSendNullSender(self):
+         m = 'A test message'
+         smtp = smtplib.SMTP(HOST, self.port, local_hostname='localhost', timeout=3)
+diff --git a/Misc/NEWS.d/next/Security/2021-05-08-11-50-46.bpo-43124.2CTM6M.rst b/Misc/NEWS.d/next/Security/2021-05-08-11-50-46.bpo-43124.2CTM6M.rst
+new file mode 100644
+index 0000000..e897d6c
+--- /dev/null
++++ b/Misc/NEWS.d/next/Security/2021-05-08-11-50-46.bpo-43124.2CTM6M.rst
+@@ -0,0 +1,2 @@
++Made the internal ``putcmd`` function in :mod:`smtplib` sanitize input for
++presence of ``\r`` and ``\n`` characters to avoid (unlikely) command injection.
+-- 
+1.8.3.1
+

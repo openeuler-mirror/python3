@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.9
-Release: 19
+Release: 20
 License: Python
 
 %global branchversion 3.7
@@ -154,6 +154,11 @@ Patch6043:  backport-36356-Fix-memory-leak-in-_asynciomodule.c-GH-165.patch
 Patch6044:  backport-36285-Fix-integer-overflow-in-the-array-module.patch
 Patch6045:  backport-CVE-2021-4189.patch
 Patch6046:  backport-CVE-2022-0391.patch
+Patch6047: backport-bpo-12800-tarfile-Restore-fix-from-011525ee9.patch
+Patch6048: backport-bpo-42183-Fix-a-stack-overflow-error-for-asyncio-Tas.patch
+Patch6049: backport-bpo-41815-SQLite-segfault-if-backup-called-on-closed.patch
+Patch6050: backport-bpo-45001-Make-email-date-parsing-more-robust-agains.patch
+Patch6051: backport-3.7-bpo-43124-Fix-smtplib-multiple-CRLF-injection-GH.patch
 
 Recommends: %{name}-help = %{version}-%{release}
 Provides: python%{branchversion} = %{version}-%{release}
@@ -294,6 +299,11 @@ rm Lib/ensurepip/_bundled/*.whl
 %patch6044 -p1
 %patch6045 -p1
 %patch6046 -p1
+%patch6047 -p1
+%patch6048 -p1
+%patch6049 -p1
+%patch6050 -p1
+%patch6051 -p1
 
 sed -i "s/generic_os/%{_vendor}/g" Lib/platform.py
 rm configure pyconfig.h.in
@@ -895,6 +905,16 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Sat Feb 19 2022 shixuantong <shixuantong@h-partners.com> - 3.7.9-20
+- Type:bugfix
+- CVE:NA
+- SUG:NA
+- DESC:bpo-43124: Fix smtplib multiple CRLF injection
+       bpo-12800: tarfile: Restore fix from 011525ee9
+       bpo-41815: SQLite: segfault if backup called on closed database
+       bpo-42183: Fix a stack overflow error for asyncio Task or Future repr()
+       bpo-45001: Make email date parsing more robust against malformed input
+
 * Thu Feb 17 2022 shixuantong <shixuantong@h-partners.com> - 3.7.9-19
 - Type:CVE
 - CVE:CVE-2021-4189 CVE-2022-0391
