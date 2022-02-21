@@ -1,0 +1,68 @@
+From bfee9fad84531a471fd7864e88947320669f68e2 Mon Sep 17 00:00:00 2001
+From: Peter McCormick <peter@pdmccormick.com>
+Date: Sat, 19 Sep 2020 23:40:46 -0400
+Subject: [PATCH] bpo-41815: SQLite: segfault if backup called on closed
+ database (GH-22322)
+
+# [bpo-41815](): SQLite: fix segfault if backup called on closed database
+
+Attempting to backup a closed database will trigger segfault:
+
+```python
+import sqlite3
+target = sqlite3.connect(':memory:')
+source = sqlite3.connect(':memory:')
+source.close()
+source.backup(target)
+```
+---
+ Lib/sqlite3/test/backup.py                                        | 7 +++++++
+ Misc/NEWS.d/next/Library/2020-09-19-23-14-54.bpo-41815.RNpuX3.rst | 2 ++
+ Modules/_sqlite/connection.c                                      | 4 ++++
+ 3 files changed, 13 insertions(+)
+ create mode 100644 Misc/NEWS.d/next/Library/2020-09-19-23-14-54.bpo-41815.RNpuX3.rst
+
+diff --git a/Lib/sqlite3/test/backup.py b/Lib/sqlite3/test/backup.py
+index 903bacf..ad1da97 100644
+--- a/Lib/sqlite3/test/backup.py
++++ b/Lib/sqlite3/test/backup.py
+@@ -36,6 +36,13 @@ class BackupTests(unittest.TestCase):
+         with self.assertRaises(sqlite.ProgrammingError):
+             self.cx.backup(bck)
+ 
++    def test_bad_source_closed_connection(self):
++        bck = sqlite.connect(':memory:')
++        source = sqlite.connect(":memory:")
++        source.close()
++        with self.assertRaises(sqlite.ProgrammingError):
++            source.backup(bck)
++
+     def test_bad_target_in_transaction(self):
+         bck = sqlite.connect(':memory:')
+         bck.execute('CREATE TABLE bar (key INTEGER)')
+diff --git a/Misc/NEWS.d/next/Library/2020-09-19-23-14-54.bpo-41815.RNpuX3.rst b/Misc/NEWS.d/next/Library/2020-09-19-23-14-54.bpo-41815.RNpuX3.rst
+new file mode 100644
+index 0000000..3560db9
+--- /dev/null
++++ b/Misc/NEWS.d/next/Library/2020-09-19-23-14-54.bpo-41815.RNpuX3.rst
+@@ -0,0 +1,2 @@
++Fix SQLite3 segfault when backing up closed database. Patch contributed by
++Peter David McCormick.
+diff --git a/Modules/_sqlite/connection.c b/Modules/_sqlite/connection.c
+index 9eb61c1..2d2f4fd 100644
+--- a/Modules/_sqlite/connection.c
++++ b/Modules/_sqlite/connection.c
+@@ -1489,6 +1489,10 @@ pysqlite_connection_backup(pysqlite_Connection *self, PyObject *args, PyObject *
+         sleep_ms = (int)ms;
+     }
+ 
++    if (!pysqlite_check_thread(self) || !pysqlite_check_connection(self)) {
++        return NULL;
++    }
++
+     if (!pysqlite_check_connection((pysqlite_Connection *)target)) {
+         return NULL;
+     }
+-- 
+1.8.3.1
+
