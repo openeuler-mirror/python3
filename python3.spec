@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.9
-Release: 21
+Release: 22
 License: Python
 
 %global branchversion 3.7
@@ -159,6 +159,7 @@ Patch6049:  backport-bpo-42183-Fix-a-stack-overflow-error-for-asyncio-Tas.patch
 Patch6050:  backport-bpo-41815-SQLite-segfault-if-backup-called-on-closed.patch
 Patch6051:  backport-bpo-45001-Make-email-date-parsing-more-robust-agains.patch
 Patch6052:  backport-3.7-bpo-43124-Fix-smtplib-multiple-CRLF-injection-GH.patch
+Patch6053:  backport-bpo-46811-Make-test-suite-support-Expat-2.4.5.patch
 
 patch9000:  Don-t-override-PYTHONPATH-which-is-already-set.patch
 patch9001:  add-the-sm3-method-for-obtaining-the-salt-value.patch
@@ -306,6 +307,7 @@ rm Lib/ensurepip/_bundled/*.whl
 %patch6050 -p1
 %patch6051 -p1
 %patch6052 -p1
+%patch6053 -p1
 
 %patch9000 -p1
 %patch9001 -p1
@@ -910,6 +912,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Mon Mar 07 2022 shixuantong <shixuantong@h-partners.com> - 3.7.9-22
+- Type:bugfix
+- CVE:NA
+- SUG:NA
+- DESC:Make test suite support upstream Expat >=2.4.5
+
 * Sat Feb 19 2022 shixuantong <shixuantong@h-partners.com> - 3.7.9-21
 - Type:bugfix
 - CVE:NA
