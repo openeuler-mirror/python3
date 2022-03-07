@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.9.9
-Release: 4
+Release: 5
 License: Python
 
 %global branchversion 3.9
@@ -91,6 +91,7 @@ Patch178: 00178-dont-duplicate-flags-in-sysconfig.patch
 Patch205: 00205-make-libpl-respect-lib64.patch
 Patch251: 00251-change-user-install-location.patch
 Patch6000: backport-Add--with-wheel-pkg-dir-configure-option.patch
+Patch6001: backport-bpo-46811-Make-test-suite-support-Expat-2.4.5.patch
 
 Patch9000: add-the-sm3-method-for-obtaining-the-salt-value.patch
 
@@ -179,6 +180,7 @@ rm -r Modules/expat
 %patch205 -p1
 %patch251 -p1
 %patch6000 -p1
+%patch6001 -p1
 
 %patch9000 -p1
 
@@ -795,6 +797,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Mon Mar 07 2022 shixuantong <shixuantong@h-partners.com> - 3.9.9-5
+- Type:bugfix
+- CVE:NA
+- SUG:NA
+- DESC:Make test suite support Expat >=2.4.5
+
 * Thu Feb 10 2022 shixuantong <shixuantong@h-partners.com> - 3.9.9-4
 - Type:bugfix
 - CVE:NA
