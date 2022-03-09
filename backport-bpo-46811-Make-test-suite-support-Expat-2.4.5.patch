@@ -76,10 +76,10 @@ index 1663b1f..9762025 100644
  
      def testDocRemoveChild(self):
 diff --git a/Lib/test/test_xml_etree.py b/Lib/test/test_xml_etree.py
-index 553529a..49f8112 100644
+index 285559a..4bd4291 100644
 --- a/Lib/test/test_xml_etree.py
 +++ b/Lib/test/test_xml_etree.py
-@@ -2186,12 +2186,6 @@ class BugsTest(unittest.TestCase):
+@@ -2183,12 +2183,6 @@ class BugsTest(unittest.TestCase):
                  b"<?xml version='1.0' encoding='ascii'?>\n"
                  b'<body>t&#227;g</body>')
  
