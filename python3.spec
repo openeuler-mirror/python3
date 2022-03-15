@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.9.9
-Release: 6
+Release: 7
 License: Python
 
 %global branchversion 3.9
@@ -90,6 +90,7 @@ Patch111: 00111-no-static-lib.patch
 Patch251: 00251-change-user-install-location.patch
 Patch6000: backport-Add--with-wheel-pkg-dir-configure-option.patch
 Patch6001: backport-bpo-46811-Make-test-suite-support-Expat-2.4.5.patch
+Patch6002: backport-bpo-20369-concurrent.futures.wait-now-deduplicates-f.patch
 
 Patch9000: add-the-sm3-method-for-obtaining-the-salt-value.patch
 
@@ -177,6 +178,7 @@ rm -r Modules/expat
 %patch251 -p1
 %patch6000 -p1
 %patch6001 -p1
+%patch6002 -p1
 
 %patch9000 -p1
 
@@ -793,6 +795,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Tue Mar 15 2022 BruceGW <gyl93216@163.com> - 3.9.9-7
+- Type:bugfix
+- CVE:NA
+- SUG:NA
+- DESC:concurrent.futures.wait() now deduplicates futures given as arg.
+
 * Wed Mar 09 2022 shixuantong <shixuantong@h-partners.com> - 3.9.9-6
 - Type:bugfix
 - CVE:NA
