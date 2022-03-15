@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.9.9
-Release: 6
+Release: 8
 License: Python
 
 %global branchversion 3.9
@@ -21,8 +21,13 @@ License: Python
 %global LDVERSION_optimized %{branchversion}
 %global LDVERSION_debug     %{branchversion}d
 
+%ifarch loongarch64
+%global SOABI_optimized cpython-%{pyshortver}
+%global SOABI_debug     cpython-%{pyshortver}d
+%else
 %global SOABI_optimized cpython-%{pyshortver}-%{_arch}-linux%{_gnu}
 %global SOABI_debug     cpython-%{pyshortver}d-%{_arch}-linux%{_gnu}
+%endif
 
 # See  http://www.python.org/dev/peps/pep-3147/
 %global bytecode_suffixes .cpython-%{pyshortver}*.pyc
@@ -90,6 +95,7 @@ Patch111: 00111-no-static-lib.patch
 Patch251: 00251-change-user-install-location.patch
 Patch6000: backport-Add--with-wheel-pkg-dir-configure-option.patch
 Patch6001: backport-bpo-46811-Make-test-suite-support-Expat-2.4.5.patch
+Patch6002: backport-bpo-20369-concurrent.futures.wait-now-deduplicates-f.patch
 
 Patch9000: add-the-sm3-method-for-obtaining-the-salt-value.patch
 
@@ -177,6 +183,7 @@ rm -r Modules/expat
 %patch251 -p1
 %patch6000 -p1
 %patch6001 -p1
+%patch6002 -p1
 
 %patch9000 -p1
 
@@ -614,9 +621,13 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %attr(0755,root,root) %dir %{_prefix}/lib/python%{branchversion}
 %attr(0755,root,root) %dir %{_prefix}/lib/python%{branchversion}/site-packages
 %attr(0755,root,root) %dir %{_prefix}/lib/python%{branchversion}/site-packages/__pycache__/
-
+%ifarch loongarch64
+%dir %{pylibdir}/config-%{LDVERSION_optimized}/
+%{pylibdir}/config-%{LDVERSION_optimized}/Makefile
+%else
 %dir %{pylibdir}/config-%{LDVERSION_optimized}-%{_arch}-linux%{_gnu}/
 %{pylibdir}/config-%{LDVERSION_optimized}-%{_arch}-linux%{_gnu}/Makefile
+%endif
 %dir %{_includedir}/python%{LDVERSION_optimized}/
 %{_includedir}/python%{LDVERSION_optimized}/%{_pyconfig_h}
 
@@ -629,8 +640,13 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %files devel
 %{_bindir}/2to3
 
+%ifarch loongarch64
+%{pylibdir}/config-%{LDVERSION_optimized}/*
+%exclude %{pylibdir}/config-%{LDVERSION_optimized}/Makefile
+%else
 %{pylibdir}/config-%{LDVERSION_optimized}-%{_arch}-linux%{_gnu}/*
 %exclude %{pylibdir}/config-%{LDVERSION_optimized}-%{_arch}-linux%{_gnu}/Makefile
+%endif
 %exclude %{_includedir}/python%{LDVERSION_optimized}/%{_pyconfig_h}
 %{_includedir}/python%{LDVERSION_optimized}/*.h
 %{_includedir}/python%{LDVERSION_optimized}/internal/
@@ -770,7 +786,11 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 
 %{_libdir}/%{py_INSTSONAME_debug}
 
+%ifarch loongarch64
+%{pylibdir}/config-%{LDVERSION_debug}
+%else
 %{pylibdir}/config-%{LDVERSION_debug}-%{_arch}-linux%{_gnu}
+%endif
 %{_includedir}/python%{LDVERSION_debug}
 %{_bindir}/python%{LDVERSION_debug}-config
 %{_bindir}/python%{LDVERSION_debug}-*-config
@@ -793,6 +813,15 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Wed Apr 27 2022 liyanan <liyanan32@h-partners.com> - 3.9.9-8
+- fix build  error for openEuler:22.03:LTS:LoongArch
+
+* Tue Mar 15 2022 shixuantong <shixuantong@h-partners.com> - 3.9.9-7
+- Type:bugfix
+- CVE:NA
+- SUG:NA
+- DESC:concurrent.futures.wait() now deduplicates futures given as arg.
+
 * Wed Mar 09 2022 shixuantong <shixuantong@h-partners.com> - 3.9.9-6
 - Type:bugfix
 - CVE:NA
