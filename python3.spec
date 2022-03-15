@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.9.9
-Release: 5
+Release: 6
 License: Python
 
 %global branchversion 3.9
@@ -87,8 +87,6 @@ Source1: pyconfig.h
 
 Patch1:   00001-rpath.patch
 Patch111: 00111-no-static-lib.patch
-Patch178: 00178-dont-duplicate-flags-in-sysconfig.patch
-Patch205: 00205-make-libpl-respect-lib64.patch
 Patch251: 00251-change-user-install-location.patch
 Patch6000: backport-Add--with-wheel-pkg-dir-configure-option.patch
 Patch6001: backport-bpo-46811-Make-test-suite-support-Expat-2.4.5.patch
@@ -176,8 +174,6 @@ rm -r Modules/expat
 
 %patch1 -p1
 %patch111 -p1
-%patch178 -p1
-%patch205 -p1
 %patch251 -p1
 %patch6000 -p1
 %patch6001 -p1
@@ -797,6 +793,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Wed Mar 09 2022 shixuantong <shixuantong@h-partners.com> - 3.9.9-6
+- Type:bugfix
+- CVE:NA
+- SUG:NA
+- DESC:delete unnecessary patches
+
 * Mon Mar 07 2022 shixuantong <shixuantong@h-partners.com> - 3.9.9-5
 - Type:bugfix
 - CVE:NA
