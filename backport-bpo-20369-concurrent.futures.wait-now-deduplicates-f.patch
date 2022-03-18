@@ -1,0 +1,102 @@
+From 9a9061d1ca7e28dc2b7e326153e933872c7cd452 Mon Sep 17 00:00:00 2001
+From: "Miss Islington (bot)"
+ <31488909+miss-islington@users.noreply.github.com>
+Date: Tue, 4 Jan 2022 06:27:26 -0800
+Subject: [PATCH] =?UTF-8?q?bpo-20369:=20concurrent.futures.wait()=20now=20?=
+ =?UTF-8?q?deduplicates=20futures=20given=20a=E2=80=A6=20(GH-30168)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+* bpo-20369: concurrent.futures.wait() now deduplicates futures given as arg.
+
+* 📜🤖 Added by blurb_it.
+
+Co-authored-by: blurb-it[bot] <43283697+blurb-it[bot]@users.noreply.github.com>
+(cherry picked from commit 7d7817cf0f826e566d8370a0e974bbfed6611d91)
+
+Co-authored-by: Kumar Aditya <59607654+kumaraditya303@users.noreply.github.com>
+---
+ Doc/library/concurrent.futures.rst                          |  3 ++-
+ Lib/concurrent/futures/_base.py                             | 13 +++++++------
+ Lib/test/test_concurrent_futures.py                         |  8 ++++++++
+ .../next/Library/2021-12-17-12-06-40.bpo-20369.zzLuBz.rst   |  1 +
+ 4 files changed, 18 insertions(+), 7 deletions(-)
+ create mode 100644 Misc/NEWS.d/next/Library/2021-12-17-12-06-40.bpo-20369.zzLuBz.rst
+
+diff --git a/Doc/library/concurrent.futures.rst b/Doc/library/concurrent.futures.rst
+index 897efc2..f62b5e3 100644
+--- a/Doc/library/concurrent.futures.rst
++++ b/Doc/library/concurrent.futures.rst
+@@ -435,7 +435,8 @@ Module Functions
+ .. function:: wait(fs, timeout=None, return_when=ALL_COMPLETED)
+ 
+    Wait for the :class:`Future` instances (possibly created by different
+-   :class:`Executor` instances) given by *fs* to complete.  Returns a named
++   :class:`Executor` instances) given by *fs* to complete. Duplicate futures
++   given to *fs* are removed and will be returned only once. Returns a named
+    2-tuple of sets.  The first set, named ``done``, contains the futures that
+    completed (finished or cancelled futures) before the wait completed.  The
+    second set, named ``not_done``, contains the futures that did not complete
+diff --git a/Lib/concurrent/futures/_base.py b/Lib/concurrent/futures/_base.py
+index 6095026..5c00f2e 100644
+--- a/Lib/concurrent/futures/_base.py
++++ b/Lib/concurrent/futures/_base.py
+@@ -284,13 +284,14 @@ def wait(fs, timeout=None, return_when=ALL_COMPLETED):
+         A named 2-tuple of sets. The first set, named 'done', contains the
+         futures that completed (is finished or cancelled) before the wait
+         completed. The second set, named 'not_done', contains uncompleted
+-        futures.
++        futures. Duplicate futures given to *fs* are removed and will be 
++        returned only once.
+     """
++    fs = set(fs)
+     with _AcquireFutures(fs):
+-        done = set(f for f in fs
+-                   if f._state in [CANCELLED_AND_NOTIFIED, FINISHED])
+-        not_done = set(fs) - done
+-
++        done = {f for f in fs
++                   if f._state in [CANCELLED_AND_NOTIFIED, FINISHED]}
++        not_done = fs - done
+         if (return_when == FIRST_COMPLETED) and done:
+             return DoneAndNotDoneFutures(done, not_done)
+         elif (return_when == FIRST_EXCEPTION) and done:
+@@ -309,7 +310,7 @@ def wait(fs, timeout=None, return_when=ALL_COMPLETED):
+             f._waiters.remove(waiter)
+ 
+     done.update(waiter.finished_futures)
+-    return DoneAndNotDoneFutures(done, set(fs) - done)
++    return DoneAndNotDoneFutures(done, fs - done)
+ 
+ class Future(object):
+     """Represents the result of an asynchronous computation."""
+diff --git a/Lib/test/test_concurrent_futures.py b/Lib/test/test_concurrent_futures.py
+index 48d56d9..d693fb4 100644
+--- a/Lib/test/test_concurrent_futures.py
++++ b/Lib/test/test_concurrent_futures.py
+@@ -564,6 +564,14 @@ create_executor_tests(ProcessPoolShutdownTest,
+ 
+ 
+ class WaitTests:
++    def test_20369(self):
++        # See https://bugs.python.org/issue20369
++        future = self.executor.submit(time.sleep, 1.5)
++        done, not_done = futures.wait([future, future],
++                            return_when=futures.ALL_COMPLETED)
++        self.assertEqual({future}, done)
++        self.assertEqual(set(), not_done)
++
+ 
+     def test_first_completed(self):
+         future1 = self.executor.submit(mul, 21, 2)
+diff --git a/Misc/NEWS.d/next/Library/2021-12-17-12-06-40.bpo-20369.zzLuBz.rst b/Misc/NEWS.d/next/Library/2021-12-17-12-06-40.bpo-20369.zzLuBz.rst
+new file mode 100644
+index 0000000..cc5cd00
+--- /dev/null
++++ b/Misc/NEWS.d/next/Library/2021-12-17-12-06-40.bpo-20369.zzLuBz.rst
+@@ -0,0 +1 @@
++:func:`concurrent.futures.wait` no longer blocks forever when given duplicate Futures. Patch by Kumar Aditya.
+-- 
+1.8.3.1
+
