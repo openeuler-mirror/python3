@@ -1,0 +1,52 @@
+From 95f99563eaa77447e67f18427fde142ea1b7f4ac Mon Sep 17 00:00:00 2001
+From: Victor Stinner <vstinner@redhat.com>
+Date: Tue, 19 Mar 2019 14:19:38 +0100
+Subject: [PATCH] bpo-36333, bpo-36356: Fix _PyEval_FiniThreads() (GH-12432)
+
+_PyEval_FiniThreads() now free the pending lock.
+
+Reference:https://github.com/python/cpython/commit/a712679a2bffffefaacdc05f788d6ea50f72a561
+Conflict:NA
+
+---
+ Python/ceval.c | 13 +++++++++++--
+ 1 file changed, 11 insertions(+), 2 deletions(-)
+
+diff --git a/Python/ceval.c b/Python/ceval.c
+index 634edba..c0256d1 100644
+--- a/Python/ceval.c
++++ b/Python/ceval.c
+@@ -154,8 +154,10 @@ PyEval_ThreadsInitialized(void)
+ void
+ PyEval_InitThreads(void)
+ {
+-    if (gil_created())
++    if (gil_created()) {
+         return;
++    }
++
+     create_gil();
+     take_gil(PyThreadState_GET());
+     _PyRuntime.ceval.pending.main_thread = PyThread_get_thread_ident();
+@@ -166,10 +168,17 @@ PyEval_InitThreads(void)
+ void
+ _PyEval_FiniThreads(void)
+ {
+-    if (!gil_created())
++    if (!gil_created()) {
+         return;
++    }
++
+     destroy_gil();
+     assert(!gil_created());
++
++    if (_PyRuntime.ceval.pending.lock != NULL) {
++        PyThread_free_lock(_PyRuntime.ceval.pending.lock);
++        _PyRuntime.ceval.pending.lock = NULL;
++    }
+ }
+ 
+ void
+-- 
+2.27.0
+
