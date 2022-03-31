@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.9
-Release: 20
+Release: 21
 License: Python
 
 %global branchversion 3.7
@@ -144,17 +144,22 @@ Patch6034:  backport-42146-Unify-cleanup-in-subprocess_fork_exec-GH-2.patch
 
 Patch6035: backport-CVE-2021-3426.patch
 Patch6036: backport-37193-Remove-thread-objects-which-finished-proce.patch
-Patch6037: backport-CVE-2021-3733.patch
-Patch6038: backport-CVE-2021-3737.patch 
-Patch6039: backport-bpo-44022-Improve-the-regression-test.patch 
-Patch6040:  backport-CVE-2021-4189.patch
-Patch6041:  backport-CVE-2022-0391.patch
-Patch6042: backport-bpo-12800-tarfile-Restore-fix-from-011525ee9.patch
-Patch6043: backport-bpo-42183-Fix-a-stack-overflow-error-for-asyncio-Tas.patch
-Patch6044: backport-bpo-41815-SQLite-segfault-if-backup-called-on-closed.patch
-Patch6045: backport-bpo-45001-Make-email-date-parsing-more-robust-agains.patch
-Patch6046: backport-3.7-bpo-43124-Fix-smtplib-multiple-CRLF-injection-GH.patch
-Patch6047: backport-bpo-46811-Make-test-suite-support-Expat-2.4.5.patch
+Patch6037: backport-36253-Remove-use-after-free-reference-in-ctypes-.patch
+Patch6038: backport-36333-36356-Fix-_PyEval_FiniThreads-GH-12432.patch
+Patch6039: backport-36356-Fix-memory-leak-in-_asynciomodule.c-GH-165.patch
+Patch6040: backport-37169-Rewrite-_PyObject_IsFreed-unit-tests-GH-13.patch
+Patch6041: backport-44363-Get-test_capi-passing-with-address-sanitiz.patch
+Patch6042: backport-CVE-2021-3733.patch
+Patch6043: backport-CVE-2021-3737.patch 
+Patch6044: backport-bpo-44022-Improve-the-regression-test.patch 
+Patch6045:  backport-CVE-2021-4189.patch
+Patch6046:  backport-CVE-2022-0391.patch
+Patch6047: backport-bpo-12800-tarfile-Restore-fix-from-011525ee9.patch
+Patch6048: backport-bpo-42183-Fix-a-stack-overflow-error-for-asyncio-Tas.patch
+Patch6049: backport-bpo-41815-SQLite-segfault-if-backup-called-on-closed.patch
+Patch6050: backport-bpo-45001-Make-email-date-parsing-more-robust-agains.patch
+Patch6051: backport-3.7-bpo-43124-Fix-smtplib-multiple-CRLF-injection-GH.patch
+Patch6052: backport-bpo-46811-Make-test-suite-support-Expat-2.4.5.patch
 
 Recommends: %{name}-help = %{version}-%{release}
 Provides: python%{branchversion} = %{version}-%{release}
@@ -294,6 +299,10 @@ rm Lib/ensurepip/_bundled/*.whl
 %patch6045 -p1
 %patch6046 -p1
 %patch6047 -p1
+%patch6049 -p1
+%patch6050 -p1
+%patch6051 -p1
+%patch6052 -p1
 
 sed -i "s/generic_os/%{_vendor}/g" Lib/platform.py
 rm configure pyconfig.h.in
@@ -895,6 +904,16 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Thu Mar 31 2022 huangduirong <huangduirong@huawei.com> - 3.7.9-21
+- Type:bugfix
+- CVE:NA
+- SUG:NA
+- DESC:fix _PyEval_FiniThreads
+       rewrite _PyObject_IsFreed unit tests
+       get test_capi passing with address sanitize
+       remove use after free reference in ctypes
+       fix memory leak in _asynciomodule.c
+
 * Mon Mar 07 2022 shixuantong <shixuantong@h-partners.com> - 3.7.9-20
 - Type:bugfix
 - CVE:NA
