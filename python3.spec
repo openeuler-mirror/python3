@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.9.9
-Release: 7
+Release: 8
 License: Python
 
 %global branchversion 3.9
@@ -21,8 +21,13 @@ License: Python
 %global LDVERSION_optimized %{branchversion}
 %global LDVERSION_debug     %{branchversion}d
 
+%ifarch loongarch64
+%global SOABI_optimized cpython-%{pyshortver}
+%global SOABI_debug     cpython-%{pyshortver}d
+%else
 %global SOABI_optimized cpython-%{pyshortver}-%{_arch}-linux%{_gnu}
 %global SOABI_debug     cpython-%{pyshortver}d-%{_arch}-linux%{_gnu}
+%endif
 
 # See  http://www.python.org/dev/peps/pep-3147/
 %global bytecode_suffixes .cpython-%{pyshortver}*.pyc
@@ -616,9 +621,13 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %attr(0755,root,root) %dir %{_prefix}/lib/python%{branchversion}
 %attr(0755,root,root) %dir %{_prefix}/lib/python%{branchversion}/site-packages
 %attr(0755,root,root) %dir %{_prefix}/lib/python%{branchversion}/site-packages/__pycache__/
-
+%ifarch loongarch64
+%dir %{pylibdir}/config-%{LDVERSION_optimized}/
+%{pylibdir}/config-%{LDVERSION_optimized}/Makefile
+%else
 %dir %{pylibdir}/config-%{LDVERSION_optimized}-%{_arch}-linux%{_gnu}/
 %{pylibdir}/config-%{LDVERSION_optimized}-%{_arch}-linux%{_gnu}/Makefile
+%endif
 %dir %{_includedir}/python%{LDVERSION_optimized}/
 %{_includedir}/python%{LDVERSION_optimized}/%{_pyconfig_h}
 
@@ -631,8 +640,13 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %files devel
 %{_bindir}/2to3
 
+%ifarch loongarch64
+%{pylibdir}/config-%{LDVERSION_optimized}/*
+%exclude %{pylibdir}/config-%{LDVERSION_optimized}/Makefile
+%else
 %{pylibdir}/config-%{LDVERSION_optimized}-%{_arch}-linux%{_gnu}/*
 %exclude %{pylibdir}/config-%{LDVERSION_optimized}-%{_arch}-linux%{_gnu}/Makefile
+%endif
 %exclude %{_includedir}/python%{LDVERSION_optimized}/%{_pyconfig_h}
 %{_includedir}/python%{LDVERSION_optimized}/*.h
 %{_includedir}/python%{LDVERSION_optimized}/internal/
@@ -772,7 +786,11 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 
 %{_libdir}/%{py_INSTSONAME_debug}
 
+%ifarch loongarch64
+%{pylibdir}/config-%{LDVERSION_debug}
+%else
 %{pylibdir}/config-%{LDVERSION_debug}-%{_arch}-linux%{_gnu}
+%endif
 %{_includedir}/python%{LDVERSION_debug}
 %{_bindir}/python%{LDVERSION_debug}-config
 %{_bindir}/python%{LDVERSION_debug}-*-config
@@ -795,6 +813,9 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Wed Apr 27 2022 liyanan <liyanan32@h-partners.com> - 3.9.9-8
+- fix build  error for openEuler:22.03:LTS:LoongArch
+
 * Tue Mar 15 2022 shixuantong <shixuantong@h-partners.com> - 3.9.9-7
 - Type:bugfix
 - CVE:NA
