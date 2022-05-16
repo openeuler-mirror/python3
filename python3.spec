@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.10.2
-Release: 1
+Release: 2
 License: Python
 
 %global branchversion 3.10
@@ -90,6 +90,7 @@ Patch251: 00251-change-user-install-location.patch
 Patch6000:  backport-bpo-46811-Make-test-suite-support-Expat-2.4.5.patch
 
 Patch9000:  add-the-sm3-method-for-obtaining-the-salt-value.patch
+Patch9001:  openEuler-CVE-2015-20107.patch
 
 Provides: python%{branchversion} = %{version}-%{release}
 Provides: python(abi) = %{branchversion}
@@ -177,6 +178,7 @@ rm configure pyconfig.h.in
 %patch6000 -p1
 
 %patch9000 -p1
+%patch9001 -p1
 
 %build
 autoconf
@@ -793,6 +795,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Mon May 16 2022 shixuantong <shixuantong@h-partners.com> - 3.10.2-2
+- Type:CVE
+- CVE:CVE-2015-20107
+- SUG:NA
+- DESC:fix CVE-2015-20107
+
 * Wed Mar 09 2022 shixuantong <shixuantong@h-partners.com> - 3.10.2-1
 - Type:enhancement
 - CVE:NA
