@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.10.2
-Release: 2
+Release: 3
 License: Python
 
 %global branchversion 3.10
@@ -195,7 +195,7 @@ topdir=$(pwd)
 %global extension_cflags ""
 %global extension_ldflags ""
 
-export CFLAGS="%{extension_cflags} -D_GNU_SOURCE -fPIC -fwrapv -fstack-protector-strong"
+export CFLAGS="%{extension_cflags} -D_GNU_SOURCE -fPIC -fwrapv -fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2"
 export CFLAGS_NODIST="%{build_cflags} -D_GNU_SOURCE -fPIC -fwrapv"
 export CXXFLAGS="%{extension_cxxflags} -D_GNU_SOURCE -fPIC -fwrapv"
 export CPPFLAGS="$(pkg-config --cflags-only-I libffi)"
@@ -795,6 +795,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Mon Jun 20 2022 shixuantong <shixuantong@h-partners.com> - 3.10.2-3
+- Type:bugfix
+- CVE:NA
+- SUG:NA
+- DESC:add safe compilation option of FS
+
 * Mon May 16 2022 shixuantong <shixuantong@h-partners.com> - 3.10.2-2
 - Type:CVE
 - CVE:CVE-2015-20107
