@@ -867,14 +867,14 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 - SUG:NA
 - DESC: fix memory leak in socketserver.ThreadingMixIn
 
-* Thu Mar 30 2021 shenyangyang<shenyangyang4@huawei.com> - 3.8.5-8
+* Tue Mar 30 2021 shenyangyang<shenyangyang4@huawei.com> - 3.8.5-8
 - Type:bugfix
 - ID:NA
 - SUG:NA
 - DESC:Rebuild for openEuler-rpm-config moving /usr/lib/rpm/openEuler/xxxx
        to /usr/lib/xxxx
 
-* Web Mar 03 2021 wuchaochao<wuchaochao4@huawei.com> - 3.8.5-7
+* Wed Mar 03 2021 wuchaochao<wuchaochao4@huawei.com> - 3.8.5-7
 - Type:cves
 - ID:CVE-2021-23336
 - SUG:NA
