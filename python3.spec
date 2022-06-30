@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.9.9
-Release: 9
+Release: 10
 License: Python
 
 %global branchversion 3.9
@@ -91,9 +91,9 @@ Patch251: 00251-change-user-install-location.patch
 Patch6000: backport-Add--with-wheel-pkg-dir-configure-option.patch
 Patch6001: backport-bpo-46811-Make-test-suite-support-Expat-2.4.5.patch
 Patch6002: backport-bpo-20369-concurrent.futures.wait-now-deduplicates-f.patch
+Patch6003: Make-mailcap-refuse-to-match-unsafe-filenam.patch
 
 Patch9000: add-the-sm3-method-for-obtaining-the-salt-value.patch
-Patch9001: openEuler-CVE-2015-20107.patch
 
 Provides: python%{branchversion} = %{version}-%{release}
 Provides: python(abi) = %{branchversion}
@@ -180,9 +180,9 @@ rm -r Modules/expat
 %patch6000 -p1
 %patch6001 -p1
 %patch6002 -p1
+%patch6003 -p1
 
 %patch9000 -p1
-%patch9001 -p1
 
 rm Lib/ensurepip/_bundled/*.whl
 rm configure pyconfig.h.in
@@ -797,6 +797,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Thu Jun 30 2022 huangduirong <huangduriong@huawei.com> - 3.9.9-10
+- Type:CVE
+- CVE:CVE-2015-10107
+- SUG:NA
+- DESC:Modify the solution of CVE-2015-20107
+
 * Mon Jun 20 2022 shixuantong <shixuantong@h-partners.com> - 3.9.9-9
 - Type:bugfix
 - CVE:NA
