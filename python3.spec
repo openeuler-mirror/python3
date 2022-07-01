@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.9
-Release: 23
+Release: 24
 License: Python
 
 %global branchversion 3.7
@@ -160,10 +160,10 @@ Patch6050:  backport-bpo-41815-SQLite-segfault-if-backup-called-on-closed.patch
 Patch6051:  backport-bpo-45001-Make-email-date-parsing-more-robust-agains.patch
 Patch6052:  backport-3.7-bpo-43124-Fix-smtplib-multiple-CRLF-injection-GH.patch
 Patch6053:  backport-bpo-46811-Make-test-suite-support-Expat-2.4.5.patch
+Patch6054:  backport-CVE-2015-20107.patch
 
 patch9000:  Don-t-override-PYTHONPATH-which-is-already-set.patch
 patch9001:  add-the-sm3-method-for-obtaining-the-salt-value.patch
-Patch9002:  openEuler-CVE-2015-20107.patch
 
 Recommends: %{name}-help = %{version}-%{release}
 Provides: python%{branchversion} = %{version}-%{release}
@@ -309,10 +309,10 @@ rm Lib/ensurepip/_bundled/*.whl
 %patch6051 -p1
 %patch6052 -p1
 %patch6053 -p1
+%patch6054 -p1
 
 %patch9000 -p1
 %patch9001 -p1
-%patch9002 -p1
 
 sed -i "s/generic_os/%{_vendor}/g" Lib/platform.py
 rm configure pyconfig.h.in
@@ -914,6 +914,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Fri Jul 01 2022 shixuantong <shixuantong@h-partners.com> - 3.7.9-24
+- Type:CVE
+- CVE:CVE-2015-20107
+- SUG:NA
+- DESC:Modify the solution of CVE-2015-20107
+
 * Mon May 16 2022 shixuantong <shixuantong@h-partners.com> - 3.7.9-23
 - Type:CVE
 - CVE:CVE-2015-20107
