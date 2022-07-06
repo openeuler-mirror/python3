@@ -3,8 +3,8 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.9
-Release: 24
-License: Python
+Release: 25
+License: Python-2.0
 
 %global branchversion 3.7
 %global pyshortver 37
@@ -914,6 +914,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Wed Jul 06 2022 shixuantong <shixuantong@h-partners.com> - 3.7.9-25
+- Type:bugfix
+- CVE:NA
+- SUG:NA
+- DESC:Modify the license of python3
+
 * Fri Jul 01 2022 shixuantong <shixuantong@h-partners.com> - 3.7.9-24
 - Type:CVE
 - CVE:CVE-2015-20107
