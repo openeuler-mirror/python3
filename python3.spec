@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.10.2
-Release: 5
+Release: 6
 License: Python-2.0
 
 %global branchversion 3.10
@@ -384,7 +384,7 @@ LD_LIBRARY_PATH=$(pwd)/build/debug $(pwd)/build/debug/python -m test.pythoninfo
 
 WITHIN_PYTHON_RPM_BUILD= \
 LD_LIBRARY_PATH=$(pwd)/build/debug $(pwd)/build/debug/python -m test.regrtest \
-    -wW --slowest -j0 \
+    -wW --slowest -j0 --timeout 1800 \
     -x test_distutils \
     -x test_bdist_rpm \
     -x test_gdb \
@@ -396,7 +396,7 @@ LD_LIBRARY_PATH=$(pwd)/build/optimized $(pwd)/build/optimized/python -m test.pyt
 
 WITHIN_PYTHON_RPM_BUILD= \
 LD_LIBRARY_PATH=$(pwd)/build/optimized $(pwd)/build/optimized/python -m test.regrtest \
-    -wW --slowest -j0 \
+    -wW --slowest -j0 --timeout 1800 \
     -x test_distutils \
     -x test_bdist_rpm \
     -x test_gdb \
@@ -795,6 +795,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Wed Aug 03 2022 shixuantong <shixuantong@h-partners.com> - 3.10.2-6
+- Type:bugfix
+- CVE:NA
+- SUG:NA
+- DESC:add timeout when running the test case
+
 * Wed Jul 06 2022 shixuantong <shixuantong@h-partners.com> - 3.10.2-5
 - Type:bugfix
 - CVE:NA
