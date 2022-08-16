@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.10.2
-Release: 6
+Release: 7
 License: Python-2.0
 
 %global branchversion 3.10
@@ -144,8 +144,6 @@ Provides: python3-idle
 Obsoletes: python3-idle
 Provides: python3-test
 Obsoletes: python3-test
-Provides: python3-tkinter
-Obsoletes: python3-tkinter
 Provides: %{name}-tools = %{version}-%{release}
 Obsoletes: %{name}-tools < %{version}-%{release}
 
@@ -153,11 +151,22 @@ Obsoletes: %{name}-tools < %{version}-%{release}
 This package contains the header files and configuration needed to develop
 python3 modules.
 
+%package tkinter
+Summary: A GUI toolkit for Python
+Requires: %{name} = %{version}-%{release}
+Provides: %{name}-turtle = %{version}-%{release}
+Provides: %{name}-tkinter = %{version}-%{release}
+
+%description tkinter
+The Tkinter (Tk interface) library is a graphical user interface toolkit for
+the Python programming language.
+
 %package debug
 Summary: Debug version of the Python runtime
 
 Requires: %{name} = %{version}-%{release}
 Requires: %{name}-devel = %{version}-%{release}
+Requires: %{name}-tkinter = %{version}-%{release}
 
 %description debug
 python3-debug provides a version of the Python runtime with numerous debugging
@@ -659,17 +668,6 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 
 %{_datadir}/icons/hicolor/*/apps/idle3.*
 
-%{pylibdir}/tkinter
-%exclude %{pylibdir}/tkinter/test
-%{dynload_dir}/_tkinter.%{SOABI_optimized}.so
-%{pylibdir}/turtle.py
-%{pylibdir}/__pycache__/turtle*%{bytecode_suffixes}
-%dir %{pylibdir}/turtledemo
-%{pylibdir}/turtledemo/*.py
-%{pylibdir}/turtledemo/*.cfg
-%dir %{pylibdir}/turtledemo/__pycache__/
-%{pylibdir}/turtledemo/__pycache__/*%{bytecode_suffixes}
-
 %{pylibdir}/ctypes/test
 %{pylibdir}/distutils/tests
 %{pylibdir}/sqlite3/test
@@ -684,7 +682,6 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{dynload_dir}/_testimportmultiple.%{SOABI_optimized}.so
 %{dynload_dir}/_xxtestfuzz.%{SOABI_optimized}.so
 %{pylibdir}/lib2to3/tests
-%{pylibdir}/tkinter/test
 %{pylibdir}/unittest/test
 
 %exclude %dir %{pylibdir}/test/
@@ -692,6 +689,17 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %exclude %{pylibdir}/test/__init__.py
 %exclude %{pylibdir}/test/__pycache__/__init__%{bytecode_suffixes}
 %exclude %{pylibdir}/test/support/
+
+%files tkinter
+%{pylibdir}/tkinter
+%{dynload_dir}/_tkinter.%{SOABI_optimized}.so
+%{pylibdir}/turtle.py
+%{pylibdir}/__pycache__/turtle*%{bytecode_suffixes}
+%dir %{pylibdir}/turtledemo
+%{pylibdir}/turtledemo/*.py
+%{pylibdir}/turtledemo/*.cfg
+%dir %{pylibdir}/turtledemo/__pycache__/
+%{pylibdir}/turtledemo/__pycache__/*%{bytecode_suffixes}
 
 %files debug
 %{_bindir}/python3-debug
@@ -795,6 +803,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Fri Aug 12 2022 shixuantong <shixuantong@h-partners.com> - 3.10.2-7
+- Type:enhancement
+- CVE:NA
+- SUG:NA
+- DESC:split python3-tkinter from python3-devel
+
 * Wed Aug 03 2022 shixuantong <shixuantong@h-partners.com> - 3.10.2-6
 - Type:bugfix
 - CVE:NA
