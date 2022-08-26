@@ -969,7 +969,7 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 - SUG:NA
 - DESC:fix integer overflow in the array module
 
-* Thu Nov 24 2021 BruceGW<gyl93216@163.com> - 3.7.9-16
+* Wed Nov 24 2021 BruceGW<gyl93216@163.com> - 3.7.9-16
 - Type:bugfix
 - CVE:NA
 - SUG:NA
@@ -985,7 +985,7 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 - SUG:NA
 - DESC:fix CVE-2021-3733 CVE-2021-3737
 
-* Web Jun 23 2021 hanxinke<hanxinke@huawei.com> - 3.7.9-14
+* Wed Jun 23 2021 hanxinke<hanxinke@huawei.com> - 3.7.9-14
 - Type:enhancement
 - CVE:NA
 - SUG:NA
@@ -1040,7 +1040,7 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 - SUG:NA
 - DESC:fix reference leak when thread is never joined
 
-* Web Mar 03 2021 wuchaochao<wuchaochao4@huawei.com> - 3.7.9-10
+* Wed Mar 03 2021 wuchaochao<wuchaochao4@huawei.com> - 3.7.9-10
 - Type:cves
 - ID:CVE-2021-23336
 - SUG:NA
