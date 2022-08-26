@@ -1052,14 +1052,14 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 - SUG:NA
 - DESC:update use rpm wheels patch and fix test case failure
 
-* Thu Mar 30 2021 shenyangyang<shenyangyang4@huawei.com> - 3.7.9-10
+* Tue Mar 30 2021 shenyangyang<shenyangyang4@huawei.com> - 3.7.9-10
 - Type:bugfix
 - ID:NA
 - SUG:NA
 - DESC:Rebuild for openEuler-rpm-config moving /usr/lib/rpm/openEuler/xxxx
        to /usr/lib/xxxx
 
-* Web Mar 03 2021 wuchaochao<wuchaochao4@huawei.com> - 3.7.9-9
+* Wed Mar 03 2021 wuchaochao<wuchaochao4@huawei.com> - 3.7.9-9
 - Type:cves
 - ID:CVE-2021-23336
 - SUG:NA
@@ -1155,7 +1155,7 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 - SUG:NA
 - DESC:update spec file
 
-* Thu Dec 24 2019 openEuler Buildteam <buildteam@openeuler.org> - 3.7.4-4
+* Tue Dec 24 2019 openEuler Buildteam <buildteam@openeuler.org> - 3.7.4-4
 - fix CVE-2019-16056 CVE-2019-16935 CVE-2019-17514
 - Delete the test keys, fix BEP problem
 
