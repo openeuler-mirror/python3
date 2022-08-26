@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.9.9
-Release: 12
+Release: 13
 License: Python-2.0
 
 %global branchversion 3.9
@@ -92,6 +92,7 @@ Patch6000: backport-Add--with-wheel-pkg-dir-configure-option.patch
 Patch6001: backport-bpo-46811-Make-test-suite-support-Expat-2.4.5.patch
 Patch6002: backport-bpo-20369-concurrent.futures.wait-now-deduplicates-f.patch
 Patch6003: Make-mailcap-refuse-to-match-unsafe-filenam.patch
+Patch6004: backport-CVE-2021-28861.patch
 
 Patch9000: add-the-sm3-method-for-obtaining-the-salt-value.patch
 
@@ -181,6 +182,7 @@ rm -r Modules/expat
 %patch6001 -p1
 %patch6002 -p1
 %patch6003 -p1
+%patch6004 -p1
 
 %patch9000 -p1
 
@@ -797,6 +799,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Thu Aug 25 2022 shixuantong <shixuantong@h-partners.com> - 3.9.9-13
+- Type:CVE
+- CVE:CVE-2021-28861
+- SUG:NA
+- DESC:fix CVE-2021-28861
+
 * Wed Aug 03 2022 shixuantong <shixuantong@h-partners.com> - 3.9.9-12
 - Type:bugfix
 - CVE:NA
