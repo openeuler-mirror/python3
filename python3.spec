@@ -944,7 +944,7 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 - SUG:NA
 - DESC:fix CVE-2020-27619
 
-* Tue Aug 19 2020 whoisxxx<zhangxuzhou4@huawei.com> - 3.8.5-2
+* Wed Aug 19 2020 whoisxxx<zhangxuzhou4@huawei.com> - 3.8.5-2
 - Type:bugfix
 - ID:NA
 - SUG:NA
