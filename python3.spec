@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.9
-Release: 26
+Release: 27
 License: Python-2.0
 
 %global branchversion 3.7
@@ -792,19 +792,9 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{pylibdir}/distutils/tests
 %{pylibdir}/sqlite3/test
 %{pylibdir}/test
-%exclude %{pylibdir}/test/allsans.pem
-%exclude %{pylibdir}/test/badcert.pem
-%exclude %{pylibdir}/test/badkey.pem
-%exclude %{pylibdir}/test/idnsans.pem
-%exclude %{pylibdir}/test/keycert2.pem
-%exclude %{pylibdir}/test/keycert3.pem
-%exclude %{pylibdir}/test/keycert4.pem
-%exclude %{pylibdir}/test/keycertecc.pem
-%exclude %{pylibdir}/test/keycert.pem
-%exclude %{pylibdir}/test/pycakey.pem
-%exclude %{pylibdir}/test/ssl_key.pem
-%exclude %{pylibdir}/test/keycert3.pem
-%exclude %{pylibdir}/test/ssl_key.pem
+%exclude %{pylibdir}/test/capath
+%exclude %{pylibdir}/test/*.pem
+%exclude %{pylibdir}/test/*.crl
 %{dynload_dir}/_ctypes_test.%{SOABI_optimized}.so
 %{dynload_dir}/_testbuffer.%{SOABI_optimized}.so
 %{dynload_dir}/_testcapi.%{SOABI_optimized}.so
@@ -915,6 +905,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Mon Sep 05 2022 yanglongkang <yanglongkang@h-partners.com> - 3.7.9-27
+- Type:enhancement
+- CVE:NA
+- SUG:NA
+- DESC:delete the .crl file, capath file and .pem file in the test case
+
 * Thu Sep 01 2022 Hongxun Ren<renhongxun@h-partners.com> - 3.7.9-26
 - Type:enhancement
 - CVE:NA
