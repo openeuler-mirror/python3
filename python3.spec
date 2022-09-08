@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.9
-Release: 26
+Release: 27
 License: Python-2.0
 
 %global branchversion 3.7
@@ -162,6 +162,7 @@ Patch6052:  backport-3.7-bpo-43124-Fix-smtplib-multiple-CRLF-injection-GH.patch
 Patch6053:  backport-bpo-46811-Make-test-suite-support-Expat-2.4.5.patch
 Patch6054:  backport-CVE-2015-20107.patch
 Patch6055:  backport-CVE-2021-28861.patch
+Patch6056:  backport-CVE-2020-10735.patch
 
 patch9000:  Don-t-override-PYTHONPATH-which-is-already-set.patch
 patch9001:  add-the-sm3-method-for-obtaining-the-salt-value.patch
@@ -312,6 +313,7 @@ rm Lib/ensurepip/_bundled/*.whl
 %patch6053 -p1
 %patch6054 -p1
 %patch6055 -p1
+%patch6056 -p1
 
 %patch9000 -p1
 %patch9001 -p1
@@ -916,6 +918,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Thu Sep 08 2022 shixuantong <shixuantong@h-partners.com> - 3.7.9-27
+- Type:CVE
+- CVE:CVE-2020-10735
+- SUG:NA
+- DESC:fix CVE-2020-10735
+
 * Fri Aug 26 2022 BruceGW <gyl93216@163.com> - 3.7.9-26
 - Type:CVE
 - CVE:CVE-2021-28861
