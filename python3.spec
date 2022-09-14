@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.9
-Release: 27
+Release: 28
 License: Python-2.0
 
 %global branchversion 3.7
@@ -167,7 +167,6 @@ Patch6056:  backport-CVE-2020-10735.patch
 patch9000:  Don-t-override-PYTHONPATH-which-is-already-set.patch
 patch9001:  add-the-sm3-method-for-obtaining-the-salt-value.patch
 
-Recommends: %{name}-help = %{version}-%{release}
 Provides: python%{branchversion} = %{version}-%{release}
 Provides: python(abi) = %{branchversion}
 
@@ -918,6 +917,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Wed Sep 14 2022 hubin <hubin73@huawei.com> - 2.9.10-28
+- Type:bugfix
+- CVE:NA
+- SUG:NA
+- DESC:remove recommend in spec
+
 * Thu Sep 08 2022 shixuantong <shixuantong@h-partners.com> - 3.7.9-27
 - Type:CVE
 - CVE:CVE-2020-10735
