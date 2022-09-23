@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.9.9
-Release: 14
+Release: 15
 License: Python-2.0
 
 %global branchversion 3.9
@@ -94,6 +94,10 @@ Patch6002: backport-bpo-20369-concurrent.futures.wait-now-deduplicates-f.patch
 Patch6003: Make-mailcap-refuse-to-match-unsafe-filenam.patch
 Patch6004: backport-CVE-2021-28861.patch
 Patch6005: backport-CVE-2020-10735.patch
+Patch6006: backport-bpo-35823-subprocess-Use-vfork-instead-of-fork-on-Li.patch
+Patch6007: backport-bpo-35823-subprocess-Fix-handling-of-pthread_sigmask.patch
+Patch6008: backport-bpo-35823-Allow-setsid-after-vfork-on-Linux.-GH-2294.patch
+Patch6009: backport-bpo-42146-Unify-cleanup-in-subprocess_fork_exec-GH-2.patch
 
 Patch9000: add-the-sm3-method-for-obtaining-the-salt-value.patch
 
@@ -185,6 +189,10 @@ rm -r Modules/expat
 %patch6003 -p1
 %patch6004 -p1
 %patch6005 -p1
+%patch6006 -p1
+%patch6007 -p1
+%patch6008 -p1
+%patch6009 -p1
 
 %patch9000 -p1
 
@@ -801,6 +809,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Thu Sep 22 zhuofeng <zhuofeng2@huawei.com> - 3.9.9-15
+- Type:bugfix
+- CVE:NA
+- SUG:NA
+- DESC:sync patches
+
 * Thu Sep 08 shixuantong <shixuantong@h-partners.com> - 3.9.9-14
 - Type:CVE
 - CVE:CVE-2020-10735

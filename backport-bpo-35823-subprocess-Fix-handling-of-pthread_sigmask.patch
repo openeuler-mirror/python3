@@ -1,0 +1,63 @@
+From 473db47747bb8bc986d88ad81799bcbd88153ac5 Mon Sep 17 00:00:00 2001
+From: Alexey Izbyshev <izbyshev@ispras.ru>
+Date: Sat, 24 Oct 2020 20:47:38 +0300
+Subject: [PATCH] bpo-35823: subprocess: Fix handling of pthread_sigmask()
+ errors (GH-22944)
+
+Using POSIX_CALL() is incorrect since pthread_sigmask() returns
+the error number instead of setting errno.
+
+Also handle failure of the first call to pthread_sigmask()
+in the parent process, and explain why we don't handle failure
+of the second call in a comment.
+---
+ Modules/_posixsubprocess.c | 19 +++++++++++++++----
+ 1 file changed, 15 insertions(+), 4 deletions(-)
+
+diff --git a/Modules/_posixsubprocess.c b/Modules/_posixsubprocess.c
+index ed49857..b7cba30 100644
+--- a/Modules/_posixsubprocess.c
++++ b/Modules/_posixsubprocess.c
+@@ -581,7 +581,9 @@ struct linux_dirent64 {
+ #ifdef VFORK_USABLE
+     if (child_sigmask) {
+         reset_signal_handlers(child_sigmask);
+-        POSIX_CALL(pthread_sigmask(SIG_SETMASK, child_sigmask, NULL));
++        if ((errno = pthread_sigmask(SIG_SETMASK, child_sigmask, NULL))) {
++            goto error;
++        }
+     }
+ #endif
+ 
+@@ -1007,7 +1009,11 @@ struct linux_dirent64 {
+          */
+         sigset_t all_sigs;
+         sigfillset(&all_sigs);
+-        pthread_sigmask(SIG_BLOCK, &all_sigs, &old_sigs);
++        if ((saved_errno = pthread_sigmask(SIG_BLOCK, &all_sigs, &old_sigs))) {
++            errno = saved_errno;
++            PyErr_SetFromErrno(PyExc_OSError);
++            goto cleanup;
++        }
+         old_sigmask = &old_sigs;
+     }
+ #endif
+@@ -1034,8 +1040,13 @@ struct linux_dirent64 {
+          * Note that in environments where vfork() is implemented as fork(),
+          * such as QEMU user-mode emulation, the parent won't be blocked,
+          * but it won't share the address space with the child,
+-         * so it's still safe to unblock the signals. */
+-        pthread_sigmask(SIG_SETMASK, old_sigmask, NULL);
++         * so it's still safe to unblock the signals.
++         *
++         * We don't handle errors here because this call can't fail
++         * if valid arguments are given, and because there is no good
++         * way for the caller to deal with a failure to restore
++         * the thread signal mask. */
++        (void) pthread_sigmask(SIG_SETMASK, old_sigmask, NULL);
+     }
+ #endif
+ 
+-- 
+1.8.3.1
+
