@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.10.2
-Release: 9
+Release: 10
 License: Python-2.0
 
 %global branchversion 3.10
@@ -93,6 +93,7 @@ Patch6002:  backport-CVE-2021-28861.patch
 Patch6003:  backport-0001-CVE-2020-10735.patch
 Patch6004:  backport-0002-CVE-2020-10735.patch
 Patch6005:  backport-0003-CVE-2020-10735.patch
+Patch6006:  backport-CVE-2022-42919.patch
 
 Patch9000:  add-the-sm3-method-for-obtaining-the-salt-value.patch
 
@@ -194,6 +195,7 @@ rm configure pyconfig.h.in
 %patch6003 -p1
 %patch6004 -p1
 %patch6005 -p1
+%patch6006 -p1
 
 %patch9000 -p1
 
@@ -811,6 +813,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Wed Nov 09 2022 zhuofeng <zhuofeng2@huawei.com> - 3.10.2-10
+- Type:CVE
+- CVE:CVE-2022-42919
+- SUG:NA
+- DESC:fix CVE-2022-42919
+
 * Thu Sep 08 2022 shixuantong <shixuantong@h-partners.com> - 3.10.2-9
 - Type:CVE
 - CVE:CVE-2020-10735
