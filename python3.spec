@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.9
-Release: 28
+Release: 29
 License: Python-2.0
 
 %global branchversion 3.7
@@ -163,6 +163,7 @@ Patch6053:  backport-bpo-46811-Make-test-suite-support-Expat-2.4.5.patch
 Patch6054:  backport-CVE-2015-20107.patch
 Patch6055:  backport-CVE-2021-28861.patch
 Patch6056:  backport-CVE-2020-10735.patch
+Patch6057:  backport-CVE-2022-45061.patch
 
 patch9000:  Don-t-override-PYTHONPATH-which-is-already-set.patch
 patch9001:  add-the-sm3-method-for-obtaining-the-salt-value.patch
@@ -313,6 +314,7 @@ rm Lib/ensurepip/_bundled/*.whl
 %patch6054 -p1
 %patch6055 -p1
 %patch6056 -p1
+%patch6057 -p1
 
 %patch9000 -p1
 %patch9001 -p1
@@ -917,7 +919,13 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
-* Wed Sep 14 2022 hubin <hubin73@huawei.com> - 2.9.10-28
+* Thu Nov 10 2022 zhuofeng <zhuofeng2@huawei.com> - 3.7.9-29
+- Type:CVE
+- CVE:CVE-2022-45061
+- SUG:NA
+- DESC:fix CVE-2022-45061
+
+* Wed Sep 14 2022 hubin <hubin73@huawei.com> - 2.7.9-28
 - Type:bugfix
 - CVE:NA
 - SUG:NA
