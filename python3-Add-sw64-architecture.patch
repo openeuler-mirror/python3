@@ -1,0 +1,102 @@
+From 4aa6fc93992a60472833f54a191f6e4a8189fc65 Mon Sep 17 00:00:00 2001
+From: wzx <wuzx1226@qq.com>
+Date: Tue, 25 Oct 2022 18:11:44 +0800
+Subject: [PATCH] Add sw64 architecture
+
+Signed-off-by: wzx <wuzx1226@qq.com>
+---
+ Modules/_ctypes/libffi_osx/types.c | 4 ++--
+ config.guess                       | 8 ++++++++
+ config.sub                         | 2 ++
+ configure                          | 2 ++
+ configure.ac                       | 2 ++
+ 5 files changed, 16 insertions(+), 2 deletions(-)
+
+diff --git a/Modules/_ctypes/libffi_osx/types.c b/Modules/_ctypes/libffi_osx/types.c
+index 44806ae..5ef17d1 100644
+--- a/Modules/_ctypes/libffi_osx/types.c
++++ b/Modules/_ctypes/libffi_osx/types.c
+@@ -43,7 +43,7 @@ FFI_INTEGRAL_TYPEDEF(float, 4, 4, FFI_TYPE_FLOAT);
+ /* Size and alignment are fake here. They must not be 0. */
+ FFI_INTEGRAL_TYPEDEF(void, 1, 1, FFI_TYPE_VOID);
+ 
+-#if defined ALPHA || defined SPARC64 || defined X86_64 ||	\
++#if defined ALPHA || defined SW_64 || defined SPARC64 || defined X86_64 ||	\
+ 	defined S390X || defined IA64 || defined POWERPC64
+ FFI_INTEGRAL_TYPEDEF(pointer, 8, 8, FFI_TYPE_POINTER);
+ #else
+@@ -112,4 +112,4 @@ FFI_INTEGRAL_TYPEDEF(longdouble, 16, 16, FFI_TYPE_LONGDOUBLE);
+ #else
+ FFI_INTEGRAL_TYPEDEF(double, 8, 8, FFI_TYPE_DOUBLE);
+ FFI_INTEGRAL_TYPEDEF(longdouble, 8, 8, FFI_TYPE_LONGDOUBLE);
+-#endif
+\ No newline at end of file
++#endif
+diff --git a/config.guess b/config.guess
+index 256083a..1579317 100755
+--- a/config.guess
++++ b/config.guess
+@@ -904,6 +904,14 @@ EOF
+ 	UNAME_MACHINE=aarch64_be
+ 	echo "$UNAME_MACHINE"-unknown-linux-"$LIBC"
+ 	exit ;;
++    sw_64:Linux:*:*)
++	case `sed -n '/^cpu model/s/^.*: \(.*\)/\1/p' < /proc/cpuinfo` in
++	  sw)   UNAME_MACHINE=sw_64 ;;
++	esac
++	objdump --private-headers /bin/sh | grep -q ld.so.1
++	if test "$?" = 0 ; then LIBC=gnulibc1 ; fi
++	echo "$UNAME_MACHINE"-sunway-linux-"$LIBC"
++	exit ;;
+     alpha:Linux:*:*)
+ 	case `sed -n '/^cpu model/s/^.*: \(.*\)/\1/p' < /proc/cpuinfo` in
+ 	  EV5)   UNAME_MACHINE=alphaev5 ;;
+diff --git a/config.sub b/config.sub
+index ba37cf9..bd82c7b 100755
+--- a/config.sub
++++ b/config.sub
+@@ -244,6 +244,7 @@ case $basic_machine in
+ 	# Some are omitted here because they have special meanings below.
+ 	1750a | 580 \
+ 	| a29k \
++	| sw_64 \
+ 	| aarch64 | aarch64_be \
+ 	| alpha | alphaev[4-8] | alphaev56 | alphaev6[78] | alphapca5[67] \
+ 	| alpha64 | alpha64ev[4-8] | alpha64ev56 | alpha64ev6[78] | alpha64pca5[67] \
+@@ -372,6 +373,7 @@ case $basic_machine in
+ 	# Recognize the basic CPU types with company name.
+ 	580-* \
+ 	| a29k-* \
++	| sw_64-* \
+ 	| aarch64-* | aarch64_be-* \
+ 	| alpha-* | alphaev[4-8]-* | alphaev56-* | alphaev6[78]-* \
+ 	| alpha64-* | alpha64ev[4-8]-* | alpha64ev56-* | alpha64ev6[78]-* \
+diff --git a/configure b/configure
+index fadbce6..71d9612 100755
+--- a/configure
++++ b/configure
+@@ -5236,6 +5236,8 @@ cat >> conftest.c <<EOF
+ #  else
+         aarch64_be-linux-gnu
+ #  endif
++# elif defined(__sw_64__)
++        sw_64-linux-gnu
+ # elif defined(__alpha__)
+         alpha-linux-gnu
+ # elif defined(__ARM_EABI__) && defined(__ARM_PCS_VFP)
+diff --git a/configure.ac b/configure.ac
+index 5c25230..1d04561 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -761,6 +761,8 @@ cat >> conftest.c <<EOF
+ #  else
+         aarch64_be-linux-gnu
+ #  endif
++# elif defined(__sw_64__)
++        sw_64-linux-gnu
+ # elif defined(__alpha__)
+         alpha-linux-gnu
+ # elif defined(__ARM_EABI__) && defined(__ARM_PCS_VFP)
+-- 
+2.33.0
+
