@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.9.9
-Release: 17
+Release: 18
 License: Python-2.0
 
 %global branchversion 3.9
@@ -102,6 +102,7 @@ Patch6010: backport-CVE-2022-42919.patch
 Patch6011: backport-CVE-2022-45061.patch
 
 Patch9000: add-the-sm3-method-for-obtaining-the-salt-value.patch
+Patch9001: python3-Add-sw64-architecture.patch
 
 Provides: python%{branchversion} = %{version}-%{release}
 Provides: python(abi) = %{branchversion}
@@ -199,6 +200,7 @@ rm -r Modules/expat
 %patch6011 -p1
 
 %patch9000 -p1
+%patch9001 -p1
 
 rm Lib/ensurepip/_bundled/*.whl
 rm configure pyconfig.h.in
@@ -813,6 +815,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Mon Nov 14 2022 wuzx<wuzx1226@qq.com> - 3.9.9-18
+- Type:feature
+- CVE:NA
+- SUG:NA
+- DESC:Add sw64 architecture
+
 * Thu Nov 10 zhuofeng <zhuofeng2@huawei.com> - 3.9.9-17
 - Type:CVE
 - CVE:CVE-2022-45061
