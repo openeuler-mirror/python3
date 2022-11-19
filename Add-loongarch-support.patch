@@ -1,0 +1,62 @@
+From bb723e61067ebc2499b47a2d83dc18a9a1df11f9 Mon Sep 17 00:00:00 2001
+From: Jingyun Hua <huajingyun@loongson.cn>
+Date: Tue, 29 Nov 2022 09:00:25 +0000
+Subject: [PATCH] Add loongarch support
+
+Signed-off-by: Jingyun Hua <huajingyun@loongson.cn>
+---
+ config.guess | 3 +++
+ config.sub   | 2 ++
+ configure.ac | 2 ++
+ 3 files changed, 7 insertions(+)
+
+diff --git a/config.guess b/config.guess
+index 1579317..87298db 100755
+--- a/config.guess
++++ b/config.guess
+@@ -978,6 +978,9 @@ EOF
+     m68*:Linux:*:*)
+ 	echo "$UNAME_MACHINE"-unknown-linux-"$LIBC"
+ 	exit ;;
++    loongarch32:Linux:*:* | loongarch64:Linux:*:* | loongarchx32:Linux:*:*)
++        echo "$UNAME_MACHINE"-unknown-linux-"$LIBC"
++        exit ;;
+     mips:Linux:*:* | mips64:Linux:*:*)
+ 	eval "$set_cc_for_build"
+ 	sed 's/^	//' << EOF > "$dummy.c"
+diff --git a/config.sub b/config.sub
+index bd82c7b..0410e5f 100755
+--- a/config.sub
++++ b/config.sub
+@@ -266,6 +266,7 @@ case $basic_machine in
+ 	| k1om \
+ 	| le32 | le64 \
+ 	| lm32 \
++	| loongarch32 | loongarch64 | loongarchx32 \
+ 	| m32c | m32r | m32rle | m68000 | m68k | m88k \
+ 	| maxq | mb | microblaze | microblazeel | mcore | mep | metag \
+ 	| mips | mipsbe | mipseb | mipsel | mipsle \
+@@ -396,6 +397,7 @@ case $basic_machine in
+ 	| k1om-* \
+ 	| le32-* | le64-* \
+ 	| lm32-* \
++	| loongarch32 | loongarch64 | loongarchx32 \
+ 	| m32c-* | m32r-* | m32rle-* \
+ 	| m68000-* | m680[012346]0-* | m68360-* | m683?2-* | m68k-* \
+ 	| m88110-* | m88k-* | maxq-* | mcore-* | metag-* \
+diff --git a/configure.ac b/configure.ac
+index 1d04561..a5b69e6 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -781,6 +781,8 @@ cat >> conftest.c <<EOF
+         hppa-linux-gnu
+ # elif defined(__ia64__)
+         ia64-linux-gnu
++# elif defined(__loongarch64)
++        loongarch64-linux-gnu
+ # elif defined(__m68k__) && !defined(__mcoldfire__)
+         m68k-linux-gnu
+ # elif defined(__mips_hard_float) && defined(__mips_isa_rev) && (__mips_isa_rev >=6) && defined(_MIPSEL)
+-- 
+2.33.0
+
