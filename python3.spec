@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.9.9
-Release: 18
+Release: 19
 License: Python-2.0
 
 %global branchversion 3.9
@@ -100,6 +100,7 @@ Patch6008: backport-bpo-35823-Allow-setsid-after-vfork-on-Linux.-GH-2294.patch
 Patch6009: backport-bpo-42146-Unify-cleanup-in-subprocess_fork_exec-GH-2.patch
 Patch6010: backport-CVE-2022-42919.patch
 Patch6011: backport-CVE-2022-45061.patch
+Patch6012: backport-CVE-2022-37454.patch
 
 Patch9000: add-the-sm3-method-for-obtaining-the-salt-value.patch
 Patch9001: python3-Add-sw64-architecture.patch
@@ -198,6 +199,7 @@ rm -r Modules/expat
 %patch6009 -p1
 %patch6010 -p1
 %patch6011 -p1
+%patch6012 -p1
 
 %patch9000 -p1
 %patch9001 -p1
@@ -815,6 +817,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Mon Nov 28 zhuofeng <zhuofeng2@huawei.com> - 3.9.9-19
+- Type:CVE
+- CVE:CVE-2022-37454
+- SUG:NA
+- DESC:fix CVE-2022-37454
+
 * Mon Nov 14 2022 wuzx<wuzx1226@qq.com> - 3.9.9-18
 - Type:feature
 - CVE:NA
