@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.9.9
-Release: 20
+Release: 21
 License: Python-2.0
 
 %global branchversion 3.9
@@ -235,6 +235,10 @@ export LINKCC="gcc"
 export CFLAGS="$CFLAGS $(pkg-config --cflags openssl)"
 export LDFLAGS="%{extension_ldflags} -g $(pkg-config --libs-only-L openssl)"
 export LDFLAGS_NODIST="%{build_ldflags} -g $(pkg-config --libs-only-L openssl)"
+
+%ifarch %{arm} aarch64
+export CFLAGS="$CFLAGS -funsigned-char"
+%endif 
 
 DebugBuildDir=build/debug
 mkdir -p ${DebugBuildDir}
@@ -825,6 +829,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Fri Dec 02 zhuofeng <zhuofeng2@huawei.com> - 3.9.9-21
+- Type:bugfix
+- CVE:NA
+- SUG:NA
+- DESC:add compile option -funsigned-char
+
 * Thu Nov 10 2022 huajingyun <huajingyun@loongson.cn> - 3.9.9-20
 - Type:bugfix
 - CVE:NA
