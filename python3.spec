@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.9.9
-Release: 19
+Release: 20
 License: Python-2.0
 
 %global branchversion 3.9
@@ -69,7 +69,9 @@ BuildRequires: tix-devel
 BuildRequires: tk-devel
 
 %ifarch %{valgrind_arches}
+%ifnarch loongarch64
 BuildRequires: valgrind-devel
+%endif
 %endif
 
 BuildRequires: xz-devel
@@ -104,6 +106,7 @@ Patch6012: backport-CVE-2022-37454.patch
 
 Patch9000: add-the-sm3-method-for-obtaining-the-salt-value.patch
 Patch9001: python3-Add-sw64-architecture.patch
+Patch9002: Add-loongarch-support.patch
 
 Provides: python%{branchversion} = %{version}-%{release}
 Provides: python(abi) = %{branchversion}
@@ -203,6 +206,7 @@ rm -r Modules/expat
 
 %patch9000 -p1
 %patch9001 -p1
+%patch9002 -p1
 
 rm Lib/ensurepip/_bundled/*.whl
 rm configure pyconfig.h.in
@@ -251,7 +255,9 @@ pushd ${DebugBuildDir}
   --with-dtrace \
   --with-ssl-default-suites=openssl \
 %ifarch %{valgrind_arches}
+%ifnarch loongarch64
   --with-valgrind \
+%endif
 %endif
   --without-ensurepip \
   --with-pydebug
@@ -279,7 +285,9 @@ pushd ${OptimizedBuildDir}
   --with-dtrace \
   --with-ssl-default-suites=openssl \
 %ifarch %{valgrind_arches}
+%ifnarch loongarch64
   --with-valgrind \
+%endif
 %endif
   --without-ensurepip \
   %{optimizations_flag}
@@ -817,6 +825,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Thu Nov 10 2022 huajingyun <huajingyun@loongson.cn> - 3.9.9-20
+- Type:bugfix
+- CVE:NA
+- SUG:NA
+- DESC: add loongarch64 support and disable valgrind-devel for loongarch64
+
 * Mon Nov 28 zhuofeng <zhuofeng2@huawei.com> - 3.9.9-19
 - Type:CVE
 - CVE:CVE-2022-37454
