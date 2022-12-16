@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.9
-Release: 30
+Release: 31
 License: Python-2.0
 
 %global branchversion 3.7
@@ -921,6 +921,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Thu Dec 15 2022 zhuofeng<zhuofeng2@huawei.com> - 3.7.9-31
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:fix error date
+
 * Mon Nov 28 2022 zhuofeng <zhuofeng2@huawei.com> - 3.7.9-30
 - Type:CVE
 - CVE:CVE-2022-37454
@@ -1081,14 +1087,14 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 - SUG:NA
 - DESC:update use rpm wheels patch and fix test case failure
 
-* Tue Mar 30 2021 shenyangyang<shenyangyang4@huawei.com> - 3.7.9-10
+* Sun Mar 30 2021 shenyangyang<shenyangyang4@huawei.com> - 3.7.9-10
 - Type:bugfix
 - ID:NA
 - SUG:NA
 - DESC:Rebuild for openEuler-rpm-config moving /usr/lib/rpm/openEuler/xxxx
        to /usr/lib/xxxx
 
-* Wed Mar 03 2021 wuchaochao<wuchaochao4@huawei.com> - 3.7.9-9
+* Mon Mar 03 2021 wuchaochao<wuchaochao4@huawei.com> - 3.7.9-9
 - Type:cves
 - ID:CVE-2021-23336
 - SUG:NA
