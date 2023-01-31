@@ -2,8 +2,8 @@ Name: python3
 Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
-Version: 3.10.2
-Release: 12
+Version: 3.10.9
+Release: 1
 License: Python-2.0
 
 %global branchversion 3.10
@@ -87,15 +87,6 @@ Source1: pyconfig.h
 
 Patch1:   00001-rpath.patch
 Patch251: 00251-change-user-install-location.patch
-Patch6000:  backport-bpo-46811-Make-test-suite-support-Expat-2.4.5.patch
-Patch6001:  backport-CVE-2015-20107.patch
-Patch6002:  backport-CVE-2021-28861.patch
-Patch6003:  backport-0001-CVE-2020-10735.patch
-Patch6004:  backport-0002-CVE-2020-10735.patch
-Patch6005:  backport-0003-CVE-2020-10735.patch
-Patch6006:  backport-CVE-2022-42919.patch
-Patch6007:  backport-CVE-2022-45061.patch
-Patch6008:  backport-CVE-2022-37454.patch
 
 Patch9000:  add-the-sm3-method-for-obtaining-the-salt-value.patch
 
@@ -191,15 +182,6 @@ rm configure pyconfig.h.in
 
 %patch1 -p1
 %patch251 -p1
-%patch6000 -p1
-%patch6001 -p1
-%patch6002 -p1
-%patch6003 -p1
-%patch6004 -p1
-%patch6005 -p1
-%patch6006 -p1
-%patch6007 -p1
-%patch6008 -p1
 
 %patch9000 -p1
 
@@ -817,6 +799,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Mon Jan 30 2023 zhuofeng <zhuofeng2@huawei.com> - 3.10.9-1
+- Type:enhancement
+- CVE:NA
+- SUG:NA
+- DESC:update version to 3.10.9
+
 * Mon Nov 28 2022 zhuofeng <zhuofeng2@huawei.com> - 3.10.2-12                                         
 - Type:CVE
 - CVE:CVE-2022-37454
