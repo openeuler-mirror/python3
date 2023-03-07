@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.9
-Release: 31
+Release: 32
 License: Python-2.0
 
 %global branchversion 3.7
@@ -165,6 +165,7 @@ Patch6055:  backport-CVE-2021-28861.patch
 Patch6056:  backport-CVE-2020-10735.patch
 Patch6057:  backport-CVE-2022-45061.patch
 Patch6058:  backport-CVE-2022-37454.patch
+Patch6059:  backport-bpo-44434-Don-t-call-PyThread_exit_thread-explicitly.patch
 
 patch9000:  Don-t-override-PYTHONPATH-which-is-already-set.patch
 patch9001:  add-the-sm3-method-for-obtaining-the-salt-value.patch
@@ -317,6 +318,7 @@ rm Lib/ensurepip/_bundled/*.whl
 %patch6056 -p1
 %patch6057 -p1
 %patch6058 -p1
+%patch6059 -p1
 
 %patch9000 -p1
 %patch9001 -p1
@@ -921,6 +923,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Sat Dec 17 2022 lingsheng <lingsheng@xfusion.com> - 3.7.9-32
+- Type:bugfix
+- CVE:NA
+- SUG:NA
+- DESC:bpo-44434: Don't call PyThread_exit_thread() explicitly
+
 * Thu Dec 15 2022 zhuofeng<zhuofeng2@huawei.com> - 3.7.9-31
 - Type:bugfix
 - ID:NA
