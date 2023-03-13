@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.9.9
-Release: 22
+Release: 23
 License: Python-2.0
 
 %global branchversion 3.9
@@ -296,6 +296,7 @@ pushd ${OptimizedBuildDir}
 %endif
 %endif
   --without-ensurepip \
+  --with-lto \
   %{optimizations_flag}
 
 %make_build EXTRA_CFLAGS="$CFLAGS"
@@ -831,6 +832,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Mon Mar 13 2023 Chenxi Mao <chenxi.mao@suse.com> - 3.9.9-23
+- Type:enhancement
+- CVE:NA
+- SUG:NA
+- DESC: Enable link time optimizaitons (LTO) for better performance.
+
 * Fri Dec 23 yaoguangzhong <yaoguangzhong@xfusion.com> - 3.9.9-22
 - Type:bugfix
 - CVE:NA
