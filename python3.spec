@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.10.9
-Release: 2
+Release: 3
 License: Python-2.0
 
 %global branchversion 3.10
@@ -87,8 +87,10 @@ Source1: pyconfig.h
 
 Patch1:   00001-rpath.patch
 Patch251: 00251-change-user-install-location.patch
+Patch6000:  backport-Make-urllib.parse.urlparse-enforce-that-a-scheme-mus.patch 
 
 Patch9000:  add-the-sm3-method-for-obtaining-the-salt-value.patch
+Patch9001:  fix-CVE-2023-24329.patch
 
 Provides: python%{branchversion} = %{version}-%{release}
 Provides: python(abi) = %{branchversion}
@@ -182,8 +184,10 @@ rm configure pyconfig.h.in
 
 %patch1 -p1
 %patch251 -p1
+%patch6000 -p1
 
 %patch9000 -p1
+%patch9001 -p1
 
 %build
 autoconf
@@ -800,6 +804,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Thu Apr 06 2023 shixuantong <shixuantong1@huawei.com> - 3.10.9-3
+- Type:CVE
+- CVE:CVE-2023-24329
+- SUG:NA
+- DESC:fix CVE-2023-24329
+
 * Mon Mar 13 2023 Chenxi Mao <chenxi.mao@suse.com> - 3.10.9-2
 - Type:enhancement
 - CVE:NA
