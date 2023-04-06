@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.7.9
-Release: 32
+Release: 33
 License: Python-2.0
 
 %global branchversion 3.7
@@ -166,9 +166,11 @@ Patch6056:  backport-CVE-2020-10735.patch
 Patch6057:  backport-CVE-2022-45061.patch
 Patch6058:  backport-CVE-2022-37454.patch
 Patch6059:  backport-bpo-44434-Don-t-call-PyThread_exit_thread-explicitly.patch
+Patch6060:  backport-Make-urllib.parse.urlparse-enforce-that-a-scheme-mus.patch
 
 patch9000:  Don-t-override-PYTHONPATH-which-is-already-set.patch
 patch9001:  add-the-sm3-method-for-obtaining-the-salt-value.patch
+Patch9002:  fix-CVE-2023-24329.patch
 
 Provides: python%{branchversion} = %{version}-%{release}
 Provides: python(abi) = %{branchversion}
@@ -319,9 +321,11 @@ rm Lib/ensurepip/_bundled/*.whl
 %patch6057 -p1
 %patch6058 -p1
 %patch6059 -p1
+%patch6060 -p1
 
 %patch9000 -p1
 %patch9001 -p1
+%patch9002 -p1
 
 sed -i "s/generic_os/%{_vendor}/g" Lib/platform.py
 rm configure pyconfig.h.in
@@ -923,6 +927,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Thu Apr 06 2023 shixuantong <shixuantong1@huawei.com>- 3.7.9-33
+- Type:CVE
+- CVE:CVE-2023-24329
+- SUG:NA
+- DESC:fix CVE-2023-24329
+
 * Sat Dec 17 2022 lingsheng <lingsheng@xfusion.com> - 3.7.9-32
 - Type:bugfix
 - CVE:NA
