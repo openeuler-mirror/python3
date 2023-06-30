@@ -28,11 +28,11 @@ Co-authored-by: Miro Hrončok <miro@hroncok.cz>
 Co-authored-by: Michal Cyprian <m.cyprian@gmail.com>
 Co-authored-by: Lumír Balhar <frenzy.madness@gmail.com>
 ---
- Lib/distutils/command/install.py |  8 +++--
+ Lib/distutils/command/install.py |  8 ++++--
  Lib/site.py                      |  9 +++++-
- Lib/sysconfig.py                 | 53 +++++++++++++++++++++++++++++++-
- Lib/test/test_sysconfig.py       | 17 ++++++++--
- 4 files changed, 81 insertions(+), 6 deletions(-)
+ Lib/sysconfig.py                 | 49 +++++++++++++++++++++++++++++++-
+ Lib/test/test_sysconfig.py       | 17 +++++++++--
+ 4 files changed, 77 insertions(+), 6 deletions(-)
 
 diff --git a/Lib/distutils/command/install.py b/Lib/distutils/command/install.py
 index 01d5331a63..79f70f0de4 100644
@@ -61,10 +61,10 @@ index 01d5331a63..79f70f0de4 100644
              else:
                  if self.exec_prefix is None:
 diff --git a/Lib/site.py b/Lib/site.py
-index 939893eb5e..d1316c3355 100644
+index 69670d9d7f..104cb93899 100644
 --- a/Lib/site.py
 +++ b/Lib/site.py
-@@ -380,8 +380,15 @@ def getsitepackages(prefixes=None):
+@@ -377,8 +377,15 @@ def getsitepackages(prefixes=None):
      return sitepackages
  
  def addsitepackages(known_paths, prefixes=None):
@@ -82,27 +82,22 @@ index 939893eb5e..d1316c3355 100644
          if os.path.isdir(sitedir):
              addsitedir(sitedir, known_paths)
 diff --git a/Lib/sysconfig.py b/Lib/sysconfig.py
-index daf9f00006..10368c92a7 100644
+index ebe3711827..55af57b335 100644
 --- a/Lib/sysconfig.py
 +++ b/Lib/sysconfig.py
-@@ -58,6 +58,16 @@
-         },
-     }
+@@ -103,6 +103,11 @@
+ else:
+     _INSTALL_SCHEMES['venv'] = _INSTALL_SCHEMES['posix_venv']
  
 +# For a brief period of time in the Fedora 36 life cycle,
 +# this installation scheme existed and was documented in the release notes.
 +# For backwards compatibility, we keep it here (at least on 3.10 and 3.11).
 +_INSTALL_SCHEMES['rpm_prefix'] = _INSTALL_SCHEMES['posix_prefix']
-+# Virtualenv >= 20.10.0 favors the "venv" scheme over the defaults when creating virtual environments.
-+# See: https://github.com/pypa/virtualenv/commit/8da79db86d8a5c74d03667a40e64ff832076445e
-+# See: https://bugs.python.org/issue45413
-+# "venv" should be the same as the posix_prefix for us,
-+# so new virtual environments aren't created with paths like venv/local/bin/python.
-+_INSTALL_SCHEMES['venv'] = _INSTALL_SCHEMES['posix_prefix']
++
  
  # NOTE: site.py has copy of this function.
  # Sync it when modify this function.
-@@ -117,6 +127,19 @@ def joinuser(*args):
+@@ -162,6 +167,19 @@ def joinuser(*args):
              },
      }
  
@@ -122,7 +117,7 @@ index daf9f00006..10368c92a7 100644
  _SCHEME_KEYS = ('stdlib', 'platstdlib', 'purelib', 'platlib', 'include',
                  'scripts', 'data')
  
-@@ -211,11 +234,39 @@ def _extend_dict(target_dict, other_dict):
+@@ -258,11 +276,40 @@ def _extend_dict(target_dict, other_dict):
          target_dict[key] = value
  
  
@@ -160,14 +155,15 @@ index daf9f00006..10368c92a7 100644
 +            _extend_dict(vars, _config_vars_local())
 +    else:
 +        _extend_dict(vars, get_config_vars())
- 
-     for key, value in _INSTALL_SCHEMES[scheme].items():
-         if os.name in ('posix', 'nt'):
++
+     if os.name == 'nt':
+         # On Windows we want to substitute 'lib' for schemes rather
+         # than the native value (without modifying vars, in case it
 diff --git a/Lib/test/test_sysconfig.py b/Lib/test/test_sysconfig.py
-index 5ee9839c04..16e92ca86f 100644
+index d96371d242..72b028435f 100644
 --- a/Lib/test/test_sysconfig.py
 +++ b/Lib/test/test_sysconfig.py
-@@ -105,8 +105,19 @@ def test_get_path(self):
+@@ -111,8 +111,19 @@ def test_get_path(self):
          for scheme in _INSTALL_SCHEMES:
              for name in _INSTALL_SCHEMES[scheme]:
                  expected = _INSTALL_SCHEMES[scheme][name].format(**config_vars)
@@ -188,16 +184,16 @@ index 5ee9839c04..16e92ca86f 100644
                      os.path.normpath(expected),
                  )
  
-@@ -263,7 +274,7 @@ def test_get_config_h_filename(self):
+@@ -336,7 +347,7 @@ def test_get_config_h_filename(self):
          self.assertTrue(os.path.isfile(config_h), config_h)
  
      def test_get_scheme_names(self):
--        wanted = ['nt', 'posix_home', 'posix_prefix']
-+        wanted = ['nt', 'posix_home', 'posix_prefix', 'rpm_prefix', 'venv']
+-        wanted = ['nt', 'posix_home', 'posix_prefix', 'posix_venv', 'nt_venv', 'venv']
++        wanted = ['nt', 'posix_home', 'posix_prefix', 'posix_venv', 'nt_venv', 'venv', 'rpm_prefix']
          if HAS_USER_BASE:
              wanted.extend(['nt_user', 'osx_framework_user', 'posix_user'])
          self.assertEqual(get_scheme_names(), tuple(sorted(wanted)))
-@@ -274,6 +285,8 @@ def test_symlink(self): # Issue 7880
+@@ -348,6 +359,8 @@ def test_symlink(self): # Issue 7880
              cmd = "-c", "import sysconfig; print(sysconfig.get_platform())"
              self.assertEqual(py.call_real(*cmd), py.call_link(*cmd))
  
