@@ -2,12 +2,12 @@ Name: python3
 Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
-Version: 3.10.9
-Release: 4
+Version: 3.11.4
+Release: 1
 License: Python-2.0
 
-%global branchversion 3.10
-%global pyshortver 310
+%global branchversion 3.11
+%global pyshortver 311
 
 %ifarch %{ix86} x86_64
 %bcond_with optimizations
@@ -87,13 +87,12 @@ Source1: pyconfig.h
 
 Patch1:   00001-rpath.patch
 Patch251: 00251-change-user-install-location.patch
-Patch6000:  backport-Make-urllib.parse.urlparse-enforce-that-a-scheme-mus.patch 
 
 Patch9000:  add-the-sm3-method-for-obtaining-the-salt-value.patch
-Patch9001:  fix-CVE-2023-24329.patch
 
 Provides: python%{branchversion} = %{version}-%{release}
 Provides: python(abi) = %{branchversion}
+Provides: python(abi) = 3.10
 
 Provides: python%{pyshortver} = %{version}-%{release}
 Obsoletes: python%{pyshortver}
@@ -184,10 +183,8 @@ rm configure pyconfig.h.in
 
 %patch1 -p1
 %patch251 -p1
-%patch6000 -p1
 
 %patch9000 -p1
-%patch9001 -p1
 
 %build
 autoconf
@@ -396,6 +393,8 @@ ln -s %{_bindir}/python3 %{buildroot}%{_bindir}/python
 
 mv %{buildroot}%{_bindir}/2to3-%{branchversion} %{buildroot}%{_bindir}/2to3
 
+cp -a %{_libdir}/libpython3.10.so.1.0 ${RPM_BUILD_ROOT}%{_libdir}
+
 %check
 topdir=$(pwd)
 
@@ -415,7 +414,8 @@ LD_LIBRARY_PATH=$(pwd)/build/debug $(pwd)/build/debug/python -m test.regrtest \
     -x test_bdist_rpm \
     -x test_gdb \
     -x test_socket \
-    -x test_asyncio
+    -x test_asyncio \
+    -i test_freeze_simple_script
 
 export OPENSSL_CONF=/non-existing-file
 LD_LIBRARY_PATH=$(pwd)/build/optimized $(pwd)/build/optimized/python -m test.pythoninfo
@@ -427,7 +427,8 @@ LD_LIBRARY_PATH=$(pwd)/build/optimized $(pwd)/build/optimized/python -m test.reg
     -x test_bdist_rpm \
     -x test_gdb \
     -x test_socket \
-    -x test_asyncio
+    -x test_asyncio \
+    -i test_freeze_simple_script
 
 export BEP_WHITELIST="$BEP_WHITELIST_TMP"
 export BEP_GTDLIST="$BEP_GTDLIST_TMP"
@@ -472,6 +473,11 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{pylibdir}/ensurepip/__pycache__/*%{bytecode_suffixes}
 
 %exclude %{pylibdir}/ensurepip/_bundled
+
+%dir %{pylibdir}/__phello__/
+%dir %{pylibdir}/__phello__/__pycache__/
+%{pylibdir}/__phello__/*.py
+%{pylibdir}/__phello__/__pycache__/*%{bytecode_suffixes}
 
 %dir %{pylibdir}/test/
 %dir %{pylibdir}/test/__pycache__/
@@ -536,6 +542,7 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{dynload_dir}/_sqlite3.%{SOABI_optimized}.so
 %{dynload_dir}/_ssl.%{SOABI_optimized}.so
 %{dynload_dir}/_struct.%{SOABI_optimized}.so
+%{dynload_dir}/_typing.%{SOABI_optimized}.so 
 %{dynload_dir}/array.%{SOABI_optimized}.so
 %{dynload_dir}/audioop.%{SOABI_optimized}.so
 %{dynload_dir}/binascii.%{SOABI_optimized}.so
@@ -564,6 +571,7 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{dynload_dir}/_xxsubinterpreters.%{SOABI_optimized}.so
 %{dynload_dir}/_zoneinfo.%{SOABI_optimized}.so
 %{dynload_dir}/xxlimited_35.%{SOABI_optimized}.so
+%{dynload_dir}/_testclinic.%{SOABI_optimized}.so
 
 %dir %{pylibdir}/site-packages/
 %dir %{pylibdir}/site-packages/__pycache__/
@@ -618,6 +626,11 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %dir %{pylibdir}/importlib/metadata/__pycache__/
 %{pylibdir}/importlib/metadata/
 
+%dir %{pylibdir}/importlib/resources/
+%dir %{pylibdir}/importlib/resources/__pycache__/
+%{pylibdir}/importlib/resources/*.py
+%{pylibdir}/importlib/resources/__pycache__/*%{bytecode_suffixes}
+
 %dir %{pylibdir}/json/
 %dir %{pylibdir}/json/__pycache__/
 %{pylibdir}/json/*.py
@@ -625,6 +638,16 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 
 %{pylibdir}/logging
 %{pylibdir}/multiprocessing
+
+%dir %{pylibdir}/re/   
+%dir %{pylibdir}/re/__pycache__/ 
+%{pylibdir}/re/*.py    
+%{pylibdir}/re/__pycache__/*%{bytecode_suffixes} 
+
+%dir %{pylibdir}/tomllib/   
+%dir %{pylibdir}/tomllib/__pycache__/ 
+%{pylibdir}/tomllib/*.py    
+%{pylibdir}/tomllib/__pycache__/*%{bytecode_suffixes} 
 
 %dir %{pylibdir}/sqlite3/
 %dir %{pylibdir}/sqlite3/__pycache__/
@@ -649,6 +672,7 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 
 %{_libdir}/%{py_INSTSONAME_optimized}
 %{_libdir}/libpython3.so
+%{_libdir}/libpython3.10.so.1.0
 
 %files -n python3-unversioned-command
 %{_bindir}/python
@@ -687,7 +711,6 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 
 %{pylibdir}/ctypes/test
 %{pylibdir}/distutils/tests
-%{pylibdir}/sqlite3/test
 %{pylibdir}/test
 %exclude %{pylibdir}/test/capath
 %exclude %{pylibdir}/test/*.pem
@@ -765,6 +788,7 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{dynload_dir}/_sqlite3.%{SOABI_debug}.so
 %{dynload_dir}/_ssl.%{SOABI_debug}.so
 %{dynload_dir}/_struct.%{SOABI_debug}.so
+%{dynload_dir}/_typing.%{SOABI_debug}.so 
 %{dynload_dir}/array.%{SOABI_debug}.so
 %{dynload_dir}/audioop.%{SOABI_debug}.so
 %{dynload_dir}/binascii.%{SOABI_debug}.so
@@ -794,6 +818,7 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{dynload_dir}/_zoneinfo.%{SOABI_debug}.so
 %{dynload_dir}/xxlimited.%{SOABI_debug}.so
 %{dynload_dir}/xxlimited_35.%{SOABI_debug}.so
+%{dynload_dir}/_testclinic.%{SOABI_debug}.so
 
 %{_libdir}/%{py_INSTSONAME_debug}
 
@@ -820,6 +845,12 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{_mandir}/*/*
 
 %changelog
+* Fri Jun 30 2023 zhuofeng<zhuofeng2@huawei.com> - 3.11.4-1
+- Type:enhancement
+- CVE:NA
+- SUG:NA
+- DESC:update version to 3.11.4
+
 * Thu Jun 01 2023 Chenxi Mao <chenxi.mao@suse.com> - 3.10.9-4
 - Type:enhancement
 - CVE:NA
