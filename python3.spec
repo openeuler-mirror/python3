@@ -3,7 +3,7 @@ Summary: Interpreter of the Python3 programming language
 URL: https://www.python.org/
 
 Version: 3.10.9
-Release: 3
+Release: 4
 License: Python-2.0
 
 %global branchversion 3.10
@@ -201,15 +201,26 @@ topdir=$(pwd)
 %global optimizations_flag "--disable-optimizations"
 %endif
 
+%if "%toolchain" == "clang"
+%global extension_cflags "-gdwarf-4"
+%global extension_ldflags ""
+%global build_ldflags ""
+%global build_cflags "-gdwarf-4"
+%else
 %global extension_cflags ""
 %global extension_ldflags ""
+%endif
 
 export CFLAGS="%{extension_cflags} -D_GNU_SOURCE -fPIC -fwrapv -fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2"
 export CFLAGS_NODIST="%{build_cflags} -D_GNU_SOURCE -fPIC -fwrapv"
 export CXXFLAGS="%{extension_cxxflags} -D_GNU_SOURCE -fPIC -fwrapv"
 export CPPFLAGS="$(pkg-config --cflags-only-I libffi)"
 export OPT="%{extension_cflags} -D_GNU_SOURCE -fPIC -fwrapv"
+%if "%toolchain" == "clang"
+export LINKCC="clang"
+%else
 export LINKCC="gcc"
+%endif
 export CFLAGS="$CFLAGS $(pkg-config --cflags openssl)"
 export LDFLAGS="%{extension_ldflags} -g $(pkg-config --libs-only-L openssl)"
 export LDFLAGS_NODIST="%{build_ldflags} -g $(pkg-config --libs-only-L openssl)"
@@ -237,6 +248,9 @@ pushd ${DebugBuildDir}
   --with-valgrind \
 %endif
   --without-ensurepip \
+%if "%toolchain" == "gcc"
+  --with-lto \
+%endif
   --with-pydebug
 
 %make_build EXTRA_CFLAGS="$CFLAGS -Og"
@@ -266,7 +280,9 @@ pushd ${OptimizedBuildDir}
   --with-valgrind \
 %endif
   --without-ensurepip \
+%if "%toolchain" == "gcc"
   --with-lto \
+%endif
   %{optimizations_flag}
 
 %make_build EXTRA_CFLAGS="$CFLAGS"
@@ -798,12 +814,20 @@ export BEP_GTDLIST="$BEP_GTDLIST_TMP"
 %{dynload_dir}/_testimportmultiple.%{SOABI_debug}.so
 %{dynload_dir}/_testinternalcapi.%{SOABI_debug}.so
 
+%exclude %{_prefix}/lib/debug/%{_libdir}
+
 %undefine _debuginfo_subpackages
 
 %files help
 %{_mandir}/*/*
 
 %changelog
+* Thu Jun 01 2023 Chenxi Mao <chenxi.mao@suse.com> - 3.10.9-4
+- Type:enhancement
+- CVE:NA
+- SUG:NA
+- DESC:Support build python via clang.
+
 * Thu Apr 06 2023 shixuantong <shixuantong1@huawei.com> - 3.10.9-3
 - Type:CVE
 - CVE:CVE-2023-24329
